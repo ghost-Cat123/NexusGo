@@ -205,7 +205,7 @@ Gateway 下行消费        → 消息已落库，ACK 不重入队
 
 ```bash
 # 在线单聊
-k6 run perf/k6/ws_online_chat.js -e VUS=50 -e DURATION=2m
+k6 run perf/k6/ws_online_chat.js -e VUS=200 -e DURATION=30s
 
 # AI 流式输出
 k6 run perf/k6/ws_ai_stream.js -e VUS=2 -e DURATION=30s

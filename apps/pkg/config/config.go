@@ -20,6 +20,7 @@ type Config struct {
 	Agent    AgentConfig    `mapstructure:"agent"`
 	Log      LogConfig      `mapstructure:"log"`
 	RabbitMQ RabbitMQConfig `mapstructure:"rabbitmq"`
+	Milvus   MilvusConfig   `mapstructure:"milvus"`
 }
 
 type ServerConfig struct {
@@ -29,8 +30,9 @@ type ServerConfig struct {
 	// Snowflake 节点号 0–1023，网关与 Logic 必须使用不同值以避免 msg_id 冲突
 	GatewaySnowflakeNode int    `mapstructure:"gateway_snowflake_node"`
 	LogicSnowflakeNode   int    `mapstructure:"logic_snowflake_node"`
-	AgentSnowflakeNode   int    `mapstructure:"agent_snowflake_node"` // 新增
-	AgentAddr            string `mapstructure:"agent_addr"`           // 方便logic调用
+	AgentSnowflakeNode   int    `mapstructure:"agent_snowflake_node"`
+	AgentAddr            string `mapstructure:"agent_addr"`   // Logic 调用 Agent 的地址
+	GatewayAddr          string `mapstructure:"gateway_addr"` // Gateway 对外地址（Docker 用 gateway:8080）
 }
 
 type MySQLConfig struct {
@@ -49,6 +51,12 @@ type RedisConfig struct {
 type RabbitMQConfig struct {
 	URL      string `mapstructure:"url"`      // AMQP 连接地址
 	Exchange string `mapstructure:"exchange"` // Exchange 名称，默认 gateway.exchange
+}
+
+type MilvusConfig struct {
+	Addr      string `mapstructure:"addr"` // 向量数据库地址
+	APIKey    string `mapstructure:"api_key"`
+	ModelName string `mapstructure:"model_name"`
 }
 
 // AgentConfig 一级结构体：管理默认Agent + 所有Agent提供商

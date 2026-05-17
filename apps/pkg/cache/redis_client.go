@@ -30,7 +30,7 @@ func InitRedis(config config.RedisConfig) error {
 		if initError != nil {
 			return
 		}
-		logger.Log.Info("数据库单例初始化成功！", pong)
+		logger.Log.Info("Redis单例初始化成功！", pong)
 	})
 	return initError
 }

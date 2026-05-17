@@ -13,24 +13,25 @@ const (
 )
 
 type Messages struct {
-	// MsgId 全局唯一（雪花），非自增；由网关或 Logic 在插入前赋值
 	MsgId      int64     `gorm:"primaryKey;column:msg_id"`
-	SeqId      int64     `gorm:"index;column:seq_id"` // 会话内序号，不同会话可重复
+	SeqId      int64     `gorm:"index;column:seq_id"`
 	SenderId   int64     `gorm:"index;column:sender_id"`
-	ReceiverId int64     `gorm:"index;column:receiver_id"`
+	ReceiverId int64     `gorm:"index;index:idx_receiver_read,priority:1;column:receiver_id"`
+	GroupId    int64     `gorm:"index;default:0;column:group_id"`
+	IsRead     bool      `gorm:"index:idx_receiver_read,priority:2;default:false;column:is_read"`
 	Content    string    `gorm:"type:text;column:content"`
-	IsRead     bool      `gorm:"default:false;column:is_read"`
-	SendStatus int8      `gorm:"column:send_status;default:0"` // 见 SendStatus* 常量
+	SendStatus int8      `gorm:"column:send_status;default:0"`
 	CreateTime time.Time `gorm:"autoCreateTime;column:create_time"`
 }
 
 // NewMessages 创建一条待插入消息（分配全局 MsgId，SeqId 默认 0；单聊由网关覆盖 SeqId）
-func NewMessages(senderId int64, receiverId int64, content string, isRead bool) *Messages {
+func NewMessages(senderId int64, receiverId int64, groupId int64, content string, isRead bool) *Messages {
 	return &Messages{
 		MsgId:      utils.GetSnowflake().Generate(),
 		SeqId:      0,
 		SenderId:   senderId,
 		ReceiverId: receiverId,
+		GroupId:    groupId,
 		Content:    content,
 		IsRead:     isRead,
 		SendStatus: SendStatusUnsent,

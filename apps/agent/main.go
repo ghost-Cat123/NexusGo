@@ -9,6 +9,7 @@ import (
 	"go-im-system/apps/pkg/db"
 	"go-im-system/apps/pkg/logger"
 	"go-im-system/apps/pkg/utils"
+	"go-im-system/apps/pkg/vector_db"
 	"log"
 	"strconv"
 )
@@ -31,6 +32,11 @@ func main() {
 	cacheInitErr := cache.InitRedis(config.GlobalConfig.Redis)
 	if cacheInitErr != nil {
 		logger.Log.Fatalf("连接缓存失败: %v", cacheInitErr)
+	}
+
+	vectorDbInitErr := vector_db.InitClient(config.GlobalConfig.Milvus)
+	if vectorDbInitErr != nil {
+		logger.Log.Fatalf("连接向量数据库失败: %v", vectorDbInitErr)
 	}
 
 	gwSnow := config.GlobalConfig.Server.AgentSnowflakeNode

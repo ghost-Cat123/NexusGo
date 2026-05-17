@@ -148,17 +148,11 @@ func (c *Client) ReadPump() {
 			// 给前端发送响应
 			c.SendMessage([]byte(`{"action":"pong"}`))
 		case "single_chat":
-			var cr struct {
-				Receiver int64  `json:"receiver"`
-				Message  string `json:"message"`
-			}
-			if err := json.Unmarshal(msgData, &cr); err == nil && cr.Receiver == -1 {
-				go handlerAIChat(c.Uid, msgData)
-			} else {
-				go handleSingleChat(c.Uid, msgData)
-			}
+			go handleSingleChat(c.Uid, msgData)
+		case "ai_chat":
+			go handlerAIChat(c.Uid, msgData)
 		case "group_chat":
-			// handleGroupChat(userID, msgData)  // 调群聊函数
+			go handleGroupChat(c.Uid, msgData) // 调群聊函数
 		case "ack":
 			// 读取确认 已读 + send_status 置为「发送已确认」(2)
 			handleAck(c.Uid, msgData)

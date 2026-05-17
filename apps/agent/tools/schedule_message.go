@@ -12,7 +12,8 @@ import (
 
 // SchMessageReq 定义入参
 type SchMessageReq struct {
-	TargetUser     string `json:"target_user" jsonschema:"required,description=接收消息的用户名(username)"`
+	TargetUser     string `json:"target_user" jsonschema:"description=接收消息的用户名(username)"`
+	GroupName      string `json:"group_name" jsonschema:"description=接收消息的群聊名称 与 target_user 互斥"`
 	SendTime       string `json:"send_time" jsonschema:"description=发送时间, RFC3339格式,例如 2026-04-03T09:00:00+08:00"`
 	MessageContent string `json:"message_content" jsonschema:"required,description=要发送的消息内容"`
 }

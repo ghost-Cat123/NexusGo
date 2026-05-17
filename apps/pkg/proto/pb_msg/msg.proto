@@ -24,6 +24,7 @@ message SendMessageReply {
 // 同步消息请求
 message SyncUnreadArgs {
   int64 receiver_id = 1;
+  int64 group_id = 2;
 }
 
 // 同步消息响应
@@ -36,11 +37,12 @@ message SyncUnreadReply {
 message MessageItem {
   int64 msg_id = 1;
   int64 sender_id = 2;
-  string content = 3;
-  string create_time = 4;
-  int64 seq_id = 5;
+  int64 group_id = 3;
+  string content = 4;
+  string create_time = 5;
+  int64 seq_id = 6;
   // 发送状态：0 未发送 1 发送未确认 2 发送已确认（与 models 常量一致）
-  int32 send_status = 6;
+  int32 send_status = 7;
 }
 
 // 网关：对端 WS 已成功写入后上报，将 send_status 0 -> 1

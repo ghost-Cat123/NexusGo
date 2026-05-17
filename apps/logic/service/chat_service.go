@@ -22,6 +22,7 @@ func (s *LogicService) SyncUnread(args *pb_msg.SyncUnreadArgs, reply *pb_msg.Syn
 		reply.Messages = append(reply.Messages, &pb_msg.MessageItem{
 			MsgId:      msg.MsgId,
 			SenderId:   msg.SenderId,
+			GroupId:    msg.GroupId,
 			Content:    msg.Content,
 			SeqId:      msg.SeqId,
 			SendStatus: int32(msg.SendStatus),

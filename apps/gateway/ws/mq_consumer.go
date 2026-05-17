@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"strconv"
 
-	amqp "github.com/rabbitmq/amqp091-go"
 	"go-im-system/apps/pkg/logger"
 	"go-im-system/apps/pkg/mq"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-// StartMQConsumer 声明该网关实例的专属 Queue，绑定到 Exchange，启动消费协程。
+const downWorkers = 50
+
+// StartMQConsumer 声明该网关实例的专属 Queue，绑定到 Exchange，启动多个消费协程。
 // gatewayAddr 示例: "127.0.0.1:8080"（与 Redis route:user:<id> 的值保持一致）
 func StartMQConsumer(gatewayAddr string) {
 	queueName := "gateway.queue." + gatewayAddr
@@ -18,8 +21,11 @@ func StartMQConsumer(gatewayAddr string) {
 	if err != nil {
 		logger.Log.Fatalf("MQ 消费者启动失败: %v", err)
 	}
-	logger.Log.Infof("✅ MQ 消费者已启动，Queue: %s", queueName)
-	go consumeLoop(msgs)
+	logger.Log.Infof("✅ MQ 消费者已启动，Queue: %s, Workers: %d", queueName, downWorkers)
+
+	for i := 0; i < downWorkers; i++ {
+		go consumeLoop(msgs)
+	}
 }
 
 // consumeLoop 阻塞消费，每条消息独立处理，不会因单条失败而崩溃。
@@ -55,7 +61,7 @@ func handleMQDelivery(d amqp.Delivery) {
 	}
 
 	// 按前端协议组装 chat_push JSON
-	pushMsg, err := marshalChatPush(payload.MsgID, payload.SeqID, payload.SenderID, payload.Content)
+	pushMsg, err := marshalChatPush(payload.MsgID, payload.SeqID, payload.GroupID, payload.SenderID, payload.Content)
 	if err != nil {
 		logger.Log.Errorf("[MQ] 组装推送 JSON 失败: %v", err)
 		_ = d.Nack(false, false)

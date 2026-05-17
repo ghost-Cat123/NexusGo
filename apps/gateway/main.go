@@ -48,7 +48,7 @@ func main() {
 	rpcclient.InitRPCClient()
 
 	// 初始化 RabbitMQ：Gateway 作为消息消费者，订阅自身专属 Queue
-	gatewayAddr := "127.0.0.1:8080"
+	gatewayAddr := config.GlobalConfig.Server.GatewayAddr
 	if mqErr := mq.InitRabbitMQ(config.GlobalConfig.RabbitMQ.URL); mqErr != nil {
 		logger.Log.Fatalf("初始化 RabbitMQ 失败: %v", mqErr)
 	}

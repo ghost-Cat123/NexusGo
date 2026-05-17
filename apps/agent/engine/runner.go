@@ -59,10 +59,11 @@ func GetAgentGraphRunner(ctx context.Context) (*adk.Runner, error) {
 	callbacks.AppendGlobalHandlers(&callback.TraceLoggerCallback{})
 	// 创建Agent
 	agent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
-		Name:          "IM-System-Agent",
-		Description:   "DeepSeek Agent",
-		Model:         cm,
-		Instruction:   instruction,
+		Name:        "IM-System-Agent",
+		Description: "DeepSeek Agent",
+		Model:       cm,
+		Instruction: instruction,
+
 		MaxIterations: 5,
 		Handlers: []adk.ChatModelAgentMiddleware{
 			&middleware.RateLimitMiddleware{},
@@ -88,7 +89,6 @@ func GetAgentGraphRunner(ctx context.Context) (*adk.Runner, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return adk.NewRunner(ctx, adk.RunnerConfig{
 		Agent:           agent,
 		EnableStreaming: true,

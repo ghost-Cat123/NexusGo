@@ -10,6 +10,17 @@ func InsertMessage(message *models.Messages) error {
 	return err
 }
 
+// BatchInsertMessages 批量插入，底层生成单条 INSERT ... VALUES (...),(...),...
+// 遇到重复主键时整批失败，调用方应降级为逐条 InsertMessage 处理。
+func BatchInsertMessages(messages []*models.Messages) error {
+	if len(messages) == 0 {
+		return nil
+	}
+	// CreateInBatches 会把 messages 按 batchSize 分批，每批一条 SQL
+	// 这里直接传 len(messages)，让整批变成一条 INSERT（调用方已经控制了批大小）
+	return db.GetDB().CreateInBatches(messages, len(messages)).Error
+}
+
 func GetUnreadMessages(receiverId int64) ([]models.Messages, error) {
 	var messages []models.Messages
 	result := db.GetDB().Where("receiver_id = ? AND is_read = ?", receiverId, false).Find(&messages)

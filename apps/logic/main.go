@@ -10,6 +10,7 @@ import (
 	"go-im-system/apps/pkg/logger"
 	"go-im-system/apps/pkg/mq"
 	"go-im-system/apps/pkg/utils"
+	"go-im-system/apps/pkg/vector_db"
 	"log"
 	"net"
 	"strconv"
@@ -51,6 +52,14 @@ func main() {
 
 	// 启动上行 MQ 消费者（Gateway → MQ → Logic，替代原 SendMessage RPC）
 	service.StartUploadConsumer()
+
+	vectorDbInitErr := vector_db.InitClient(config.GlobalConfig.Milvus)
+	if cacheInitErr != nil {
+		logger.Log.Fatalf("连接向量数据库失败: %v", vectorDbInitErr)
+	}
+
+	// 启动向量数据库消费者 消息异步落入向量数据库
+	service.StartVectorConsumer()
 
 	GeeRPC.Use(midware.LoggerInterceptor, midware.RecoveryInterceptor)
 

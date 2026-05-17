@@ -8,16 +8,31 @@ import (
 	"fmt"
 	"go-im-system/apps/pkg/config"
 	"go-im-system/apps/pkg/mq"
+	"go-im-system/apps/pkg/utils"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"go-im-system/apps/gateway/rpcclient"
 	"go-im-system/apps/pkg/logger"
 	"go-im-system/apps/pkg/proto/pb_msg"
 	"log"
 )
+
+// agentHTTPClient 是全局共享的 HTTP 客户端。
+// 使用连接池+长连接，避免每次 SSE 请求都新建 TCP 连接，显著降低 TTFT。
+var agentHTTPClient = &http.Client{
+	Transport: &http.Transport{
+		MaxIdleConns:        64,
+		MaxIdleConnsPerHost: 16,
+		IdleConnTimeout:     90 * time.Second,
+		DisableKeepAlives:   false, // 必须保持长连接
+	},
+	// SSE 是流式响应，不设整体超时，由调用方负责 ctx 取消
+	Timeout: 0,
+}
 
 // NotifyDeliveredRPC 通知 Logic：对端 WS 已写入，send_status 0→1
 func NotifyDeliveredRPC(ctx context.Context, senderID, msgID int64) {
@@ -29,20 +44,13 @@ func NotifyDeliveredRPC(ctx context.Context, senderID, msgID int64) {
 	}
 }
 
-// singleChatConvID 单聊会话 ID（有序用户对），用于会话内 Seq 的 Redis 键空间隔离 保证键的唯一性
-func singleChatConvID(a, b int64) string {
-	if a > b {
-		return fmt.Sprintf("%d_%d", b, a)
-	}
-	return fmt.Sprintf("%d_%d", a, b)
-}
-
-func marshalChatPush(msgID, seqID, from int64, content string) ([]byte, error) {
+func marshalChatPush(msgID, seqID, groupID, from int64, content string) ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"chat_type": "chat_push",
 		"msg_id":    msgID,
 		"seq_id":    seqID,
 		"from":      from,
+		"group_id":  groupID,
 		"content":   content,
 	})
 }
@@ -60,10 +68,10 @@ func handleSingleChat(senderId int64, msgData []byte) {
 
 	// 可靠性管理器：生成会话ID、消息ID、会话内序号
 	if DefaultReliability != nil {
-		convID = singleChatConvID(senderId, clientReq.Receiver)
+		convID = utils.SingleChatConvID(senderId, clientReq.Receiver)
 		seq, err := DefaultReliability.GetNextSeqID(bgCtx, convID, senderId)
 		if err != nil {
-			logger.Log.Errorf("分配会话序号失败: %v", err)
+			logger.Log.Errorf("单聊分配会话序号失败: %v", err)
 			return
 		}
 		seqID = seq
@@ -74,6 +82,8 @@ func handleSingleChat(senderId int64, msgData []byte) {
 	payload := mq.UploadPayload{
 		MsgID:      msgID,
 		SeqID:      seqID,
+		ChatType:   mq.ChatTypeSingle,
+		GroupID:    0,
 		ConvID:     convID,
 		SenderID:   senderId,
 		ReceiverID: clientReq.Receiver,
@@ -96,78 +106,123 @@ func handleSingleChat(senderId int64, msgData []byte) {
 		senderId, clientReq.Receiver, msgID)
 }
 
-func handlerAIChat(senderId int64, msgData []byte) {
+func handleGroupChat(senderId int64, msgData []byte) {
 	var clientReq ClientRequest
 	if err := json.Unmarshal(msgData, &clientReq); err != nil {
 		logger.Log.Errorf("JSON解析失败: %v", err)
 		return
 	}
 	bgCtx := context.Background()
-
-	// 生成AI对话专属MsgID
-	convID := fmt.Sprintf("ai_%d", senderId)
 	var msgID, seqID int64
-
-	// 可靠性管理器：生成会话ID、消息ID、会话内序号
+	// 群聊 ConvID 格式：group_{group_id}
+	convID := fmt.Sprintf("group_%d", clientReq.GroupID)
+	// 可靠性管理器：生成消息ID、会话内序号
 	if DefaultReliability != nil {
 		seq, err := DefaultReliability.GetNextSeqID(bgCtx, convID, senderId)
 		if err != nil {
-			logger.Log.Errorf("分配会话序号失败: %v", err)
+			logger.Log.Errorf("群聊分配会话序号失败: %v", err)
 			return
 		}
 		seqID = seq
 		msgID = DefaultReliability.GenerateMsgID(bgCtx, convID, seqID)
 	}
-
-	// 包装用户提问走MQ上行 Logic中异步落库
+	// 组装群聊上行payload
 	payload := mq.UploadPayload{
 		MsgID:      msgID,
 		SeqID:      seqID,
+		ChatType:   mq.ChatTypeGroup,
+		GroupID:    clientReq.GroupID,
 		ConvID:     convID,
 		SenderID:   senderId,
-		ReceiverID: -1,
+		ReceiverID: clientReq.Receiver,
 		Content:    clientReq.Message,
 	}
 	body, _ := json.Marshal(payload)
+
 	if pubErr := mq.PublishUpload(bgCtx, "upload.all", body); pubErr != nil {
-		logger.Log.Errorf("[Gateway] AI上行Publish失败: %v", pubErr)
+		logger.Log.Errorf("[Gateway] 群聊上行 Publish 失败: %v", pubErr)
 		return
 	}
-	// 服务端ACK
+
+	// 立即给发送者返回 server_ack
 	if senderClient, ok := GlobalCliMap.Get(strconv.FormatInt(senderId, 10)); ok {
 		ackMsg := fmt.Sprintf(`{"chat_type":"server_ack","msg_id":%d,"seq_id":%d}`, msgID, seqID)
 		senderClient.SendMessage([]byte(ackMsg))
 	}
+}
 
-	// SSE直连Agent，按chunk推送给网关
+func handlerAIChat(senderId int64, msgData []byte) {
+	var clientReq ClientRequest
+	if err := json.Unmarshal(msgData, &clientReq); err != nil {
+		logger.Log.Errorf("JSON解析失败: %v", err)
+		return
+	}
+
+	// ── 第一步：立即发起 SSE 请求（不等 Redis/MQ，最小化 TTFT）──
 	agentURL := fmt.Sprintf("%s/agent/chat/sse?user_id=%d&message=%s",
 		config.GlobalConfig.Server.AgentAddr, senderId, url.QueryEscape(clientReq.Message))
-	resp, err := http.Get(agentURL)
+	resp, err := agentHTTPClient.Get(agentURL)
 	if err != nil {
 		logger.Log.Errorf("[Gateway] 连接 Agent SSE 失败: %v", err)
 		return
 	}
 	defer resp.Body.Close()
 
+	// ── 第二步：MQ 上行异步落库，不阻塞流式推送 ──
+	bgCtx := context.Background()
+	convID := fmt.Sprintf("ai_%d", senderId)
+	var msgID, seqID int64
+
+	if DefaultReliability != nil {
+		seq, err := DefaultReliability.GetNextSeqID(bgCtx, convID, senderId)
+		if err != nil {
+			logger.Log.Errorf("分配会话序号失败: %v", err)
+			// 序号分配失败不影响流式推送，继续
+		} else {
+			seqID = seq
+			msgID = DefaultReliability.GenerateMsgID(bgCtx, convID, seqID)
+		}
+	}
+
+	// 异步上行 MQ + 发送 server_ack，不阻塞 SSE 扫描
+	go func(mid, sid int64) {
+		payload := mq.UploadPayload{
+			MsgID:      mid,
+			SeqID:      sid,
+			ChatType:   mq.ChatTypeAI,
+			GroupID:    0,
+			ConvID:     convID,
+			SenderID:   senderId,
+			ReceiverID: -1,
+			Content:    clientReq.Message,
+		}
+		body, _ := json.Marshal(payload)
+		if pubErr := mq.PublishUpload(bgCtx, "upload.all", body); pubErr != nil {
+			logger.Log.Errorf("[Gateway] AI上行Publish失败: %v", pubErr)
+		}
+		// 服务端 ACK（落库成功后通知客户端消息已持久化）
+		if senderClient, ok := GlobalCliMap.Get(strconv.FormatInt(senderId, 10)); ok {
+			ackMsg := fmt.Sprintf(`{"chat_type":"server_ack","msg_id":%d,"seq_id":%d}`, mid, sid)
+			senderClient.SendMessage([]byte(ackMsg))
+		}
+	}(msgID, seqID)
+
+	// ── 第三步：扫描 SSE 流，实时 push chunk 给客户端 ──
 	senderClient, ok := GlobalCliMap.Get(strconv.FormatInt(senderId, 10))
 	if !ok {
-		// 离线直接返回 AI消息已落库兜底
+		// 用户已离线，AI消息落库兜底，无需推送
 		return
 	}
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		line := scanner.Text()
-		// 结束符
 		if line == "data: [DONE]" {
 			senderClient.SendMessage([]byte(`{"chat_type":"ai_end","from":"-1"}`))
 			return
 		}
-		// 消息
 		if strings.HasPrefix(line, "data: ") {
-			// 去除前缀
 			chunk := strings.TrimPrefix(line, "data: ")
 			msg := fmt.Sprintf(`{"chat_type":"ai_chunk","from":"-1","content":"%s"}`, chunk)
-			// 发送消息
 			senderClient.SendMessage([]byte(msg))
 		}
 	}

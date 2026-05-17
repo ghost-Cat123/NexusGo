@@ -3,52 +3,74 @@ package engine
 import (
 	"context"
 	"errors"
-	"github.com/cloudwego/eino/adk"
-	"github.com/cloudwego/eino/schema"
-	"go-im-system/apps/agent/memory"
-	"go-im-system/apps/pkg/logger"
+	"fmt"
+	"go-im-system/apps/agent/dao"
 	"io"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/cloudwego/eino/adk"
+	"github.com/cloudwego/eino/schema"
+	"go-im-system/apps/agent/memory"
+	"go-im-system/apps/pkg/logger"
 )
 
-// PrepareAgentContext 准备AI消息
-func PrepareAgentContext(ctx context.Context, senderId int64, message string) (*adk.Runner, *memory.Session, []*schema.Message, error) {
-	// 用于后续工具调用、中间件等操作
-	sessionID := "agent_session:" + strconv.FormatInt(senderId, 10)
-	logger.Log.Infof("[AI] 开始处理用户[%d]问题: %s", senderId, strings.TrimSpace(message))
-	// 1. 调用Eino 返回channel (存储的AI回应)
+// PrepareAgentContext 组装 Agent 执行上下文：
+// 短期记忆（Redis 滑窗）+ 中期摘要（MySQL）→ 合并为完整历史消息列表
+func PrepareAgentContext(ctx context.Context, senderID int64, message string) (*adk.Runner, *memory.Session, []*schema.Message, error) {
+	sessionID := "agent_session:" + strconv.FormatInt(senderID, 10)
+	logger.Log.Infof("[AI] 开始处理用户[%d]问题: %s", senderID, strings.TrimSpace(message))
+
+	// 1. 初始化 Runner
 	runner, err := GetAgentGraphRunner(ctx)
 	if err != nil {
 		logger.Log.Errorf("[AI] 初始化 Runner 失败: %v", err)
 		return nil, nil, nil, err
 	}
-	// 创建store
+
+	// 2. 获取 Session（传入 userID 供摘要压缩时使用）
 	store := memory.NewRedisStore(time.Hour * 24)
-	// 生成sessionID
-	// 创建或回复session
-	session := store.GetOrCreate(sessionID)
-	// 将用户输入 转换为schema
+	session := store.GetOrCreate(sessionID, senderID)
+	// 3. 追加用户当前消息到 Redis 短期记忆
 	userMsg := schema.UserMessage(strings.TrimSpace(message))
 	if err := session.Append(ctx, userMsg); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("写入 Session 失败: %w", err)
 	}
-	// 获取历史消息
-	history, err := session.GetMessages(ctx)
+
+	// 4. 读取短期记忆（含刚写入的用户消息）
+	shortTermHistory, err := session.GetMessages(ctx)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("读取 Session 失败: %w", err)
 	}
-	return runner, session, history, nil
+
+	// 5. 读取中期摘要（MySQL 最近一条）
+	recentSummary, err := dao.GetLatestSummary(senderID, sessionID)
+	if err != nil {
+		// 摘要读取失败不应中断正常对话，降级处理
+		logger.Log.Warnf("[AI] 读取中期摘要失败（已降级）: %v", err)
+		recentSummary = ""
+	}
+
+	// 6. 组装最终历史消息列表：
+	//    [中期摘要（若有）] + [短期滑窗对话]
+	//    注意：摘要以 SystemMessage 形式插入到历史头部，让 LLM 感知上下文
+	var fullHistory []*schema.Message
+	if recentSummary != "" {
+		summaryMsg := schema.SystemMessage(
+			fmt.Sprintf("[历史对话摘要，请参考但不必完全重复]\n%s", recentSummary),
+		)
+		fullHistory = append(fullHistory, summaryMsg)
+		logger.Log.Debugf("[AI] 注入中期摘要，长度=%d 字", len(recentSummary))
+	}
+	fullHistory = append(fullHistory, shortTermHistory...)
+
+	return runner, session, fullHistory, nil
 }
 
 func GetAssistantFromEvents(events *adk.AsyncIterator[*adk.AgentEvent]) (<-chan string, error) {
-	// 实时接收字符串 避免主循环return接收者不接收导致永久阻塞
-	// 缓冲区用于写入剩余帧后正常关闭
 	outChan := make(chan string, 64)
-	// 开启协程 处理events迭代器
 	go func() {
-		// 关闭通道
 		defer close(outChan)
 		for {
 			event, ok := events.Next()
@@ -58,21 +80,17 @@ func GetAssistantFromEvents(events *adk.AsyncIterator[*adk.AgentEvent]) (<-chan 
 			if event.Err != nil {
 				logger.Log.Errorf("AI 事件流解析报错: %v", event.Err)
 			}
-			// 消息为空
 			if event.Output == nil || event.Output.MessageOutput == nil {
 				continue
 			}
 			mv := event.Output.MessageOutput
-			// 只处理AI消息
 			if mv.Role != schema.Assistant {
 				continue
 			}
-			// 处理开启Streaming 的情况
 			if mv.IsStreaming {
 				mv.MessageStream.SetAutomaticClose()
 				for {
 					frame, err := mv.MessageStream.Recv()
-					// 当前流式消息处理完毕
 					if errors.Is(err, io.EOF) {
 						break
 					}
@@ -81,13 +99,11 @@ func GetAssistantFromEvents(events *adk.AsyncIterator[*adk.AgentEvent]) (<-chan 
 						break
 					}
 					if frame != nil && frame.Content != "" {
-						// 将消息存入通道
 						outChan <- frame.Content
 					}
 				}
 				continue
 			}
-			// 处理非流式的情况
 			if mv.Message != nil && mv.Message.Content != "" {
 				outChan <- mv.Message.Content
 			}
