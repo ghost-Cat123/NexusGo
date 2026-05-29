@@ -36,7 +36,7 @@ func SummarizeWithLLM(ctx context.Context, msgs []*schema.Message) (string, erro
 
 	// 3. 初始化 ChatModel（每次创建轻量 ChatModel，不复用 Agent Runner 避免 Tool 干扰）
 	defaultAgent := config.GetDefaultAgent()
-	apiKey := resolveAPIKey(defaultAgent)
+	apiKey := config.ResolveAgentAPIKey(defaultAgent)
 	if apiKey == "" {
 		return "", fmt.Errorf("摘要 LLM：API Key 为空")
 	}
@@ -66,12 +66,4 @@ func SummarizeWithLLM(ctx context.Context, msgs []*schema.Message) (string, erro
 
 	logger.Log.Debugf("[Summarizer] 摘要生成成功，原始对话 %d 条，摘要长度 %d 字", len(msgs), len(summary))
 	return summary, nil
-}
-
-// resolveAPIKey 从配置或环境变量获取 API Key（与 runner.go 中的逻辑保持一致）
-func resolveAPIKey(agent config.ProviderConfig) string {
-	if strings.TrimSpace(agent.APIKey) != "" {
-		return strings.TrimSpace(agent.APIKey)
-	}
-	return ""
 }

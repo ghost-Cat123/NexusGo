@@ -5,42 +5,51 @@ import (
 	"fmt"
 	"github.com/cloudwego/eino-ext/components/model/deepseek"
 	"github.com/cloudwego/eino/adk"
-	"github.com/cloudwego/eino/callbacks"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
-	"go-im-system/apps/agent/callback"
+	"go-im-system/apps/agent/memory"
 	"go-im-system/apps/agent/middleware"
 	"go-im-system/apps/agent/tools"
 	"go-im-system/apps/pkg/config"
 	"go-im-system/apps/pkg/logger"
-	"os"
 	"strings"
+	"sync"
 )
 
-func resolveAgentAPIKey(defaultAgent config.ProviderConfig) string {
-	if strings.TrimSpace(defaultAgent.APIKey) != "" {
-		return strings.TrimSpace(defaultAgent.APIKey)
-	}
-
-	defaultName := strings.ToUpper(strings.TrimSpace(config.GlobalConfig.Agent.Default))
-	if defaultName != "" {
-		// 支持 Viper 的层级环境变量写法：AGENT_PROVIDERS_DEEPSEEK_API_KEY
-		if key := strings.TrimSpace(os.Getenv("AGENT_PROVIDERS_" + defaultName + "_API_KEY")); key != "" {
-			return key
-		}
-	}
-
-	// 兼容常见命名
-	if key := strings.TrimSpace(os.Getenv("DEEPSEEK_API_KEY")); key != "" {
-		return key
-	}
-	return ""
-}
+var (
+	cacheRunner *adk.Runner
+	runnerMu    sync.Mutex
+	runnerOnce  sync.Once
+)
 
 func GetAgentGraphRunner(ctx context.Context) (*adk.Runner, error) {
+	// 快速路径
+	// 缓存中有runner 直接返回 避免重复创建开销
+	if cacheRunner != nil {
+		return cacheRunner, nil
+	}
+
+	// 慢速路径
+	runnerMu.Lock()
+	defer runnerMu.Unlock()
+	// 再次检查 避免加锁时并发创建
+	if cacheRunner != nil {
+		return cacheRunner, nil
+	}
+	// 没有才创建runner
+	runner, err := buildRunner(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// 缓存runner
+	cacheRunner = runner
+	return cacheRunner, nil
+}
+
+func buildRunner(ctx context.Context) (*adk.Runner, error) {
 	defaultAgent := config.GetDefaultAgent()
 	instruction := "You are a helpful assistant."
-	apiKey := resolveAgentAPIKey(defaultAgent)
+	apiKey := config.ResolveAgentAPIKey(defaultAgent)
 	if apiKey == "" {
 		return nil, fmt.Errorf("AI API Key 为空，请在 apps/config.yaml 填写 agent.providers.%s.api_key 或设置环境变量 DEEPSEEK_API_KEY", config.GlobalConfig.Agent.Default)
 	}
@@ -55,8 +64,6 @@ func GetAgentGraphRunner(ctx context.Context) (*adk.Runner, error) {
 		return nil, fmt.Errorf("init model failed: %w", err)
 	}
 	logger.Log.Infof("AI 模型初始化成功，provider=%s model=%s", config.GlobalConfig.Agent.Default, defaultAgent.ModelName)
-	// 注册全局chatModel and tools callbacks
-	callbacks.AppendGlobalHandlers(&callback.TraceLoggerCallback{})
 	// 创建Agent
 	agent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "IM-System-Agent",
@@ -67,6 +74,7 @@ func GetAgentGraphRunner(ctx context.Context) (*adk.Runner, error) {
 		MaxIterations: 5,
 		Handlers: []adk.ChatModelAgentMiddleware{
 			&middleware.RateLimitMiddleware{},
+			&middleware.ApprovalMiddleware{},
 			&middleware.SafeAgentMiddleware{},
 		},
 		ToolsConfig: adk.ToolsConfig{
@@ -92,5 +100,6 @@ func GetAgentGraphRunner(ctx context.Context) (*adk.Runner, error) {
 	return adk.NewRunner(ctx, adk.RunnerConfig{
 		Agent:           agent,
 		EnableStreaming: true,
+		CheckPointStore: memory.NewCheckPointStore(),
 	}), nil
 }

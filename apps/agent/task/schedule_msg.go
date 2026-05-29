@@ -10,7 +10,7 @@ import (
 
 const batch = 100
 
-func StartCronJobs() {
+func StartCronJobs() *cron.Cron {
 	c := cron.New(cron.WithSeconds())
 	// 每分钟的第 0 秒执行一次
 	_, err := c.AddFunc("0 * * * * *", handleScheduledMessages)
@@ -18,6 +18,7 @@ func StartCronJobs() {
 		logger.Log.Fatalf("启动定时任务失败: %v", err)
 	}
 	c.Start()
+	return c
 }
 
 func handleScheduledMessages() {

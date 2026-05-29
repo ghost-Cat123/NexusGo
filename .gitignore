@@ -1,6 +1,5 @@
 .idea
 *.iml
-*_test.go
 *.exe
 apps/config.yaml
 /apps/logic/sql/*.sql

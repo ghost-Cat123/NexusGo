@@ -139,6 +139,26 @@ func InitConfig(configPath string) error {
 	return nil
 }
 
+func ResolveAgentAPIKey(defaultAgent ProviderConfig) string {
+	if strings.TrimSpace(defaultAgent.APIKey) != "" {
+		return strings.TrimSpace(defaultAgent.APIKey)
+	}
+
+	defaultName := strings.ToUpper(strings.TrimSpace(GlobalConfig.Agent.Default))
+	if defaultName != "" {
+		// 支持 Viper 的层级环境变量写法：AGENT_PROVIDERS_DEEPSEEK_API_KEY
+		if key := strings.TrimSpace(os.Getenv("AGENT_PROVIDERS_" + defaultName + "_API_KEY")); key != "" {
+			return key
+		}
+	}
+
+	// 兼容常见命名
+	if key := strings.TrimSpace(os.Getenv("DEEPSEEK_API_KEY")); key != "" {
+		return key
+	}
+	return ""
+}
+
 // GetDefaultAgent 获取【默认Agent】配置（切换后自动生效）
 func GetDefaultAgent() ProviderConfig {
 	agentName := GlobalConfig.Agent.Default

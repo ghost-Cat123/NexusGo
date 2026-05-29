@@ -36,3 +36,14 @@ func GetDB() *gorm.DB {
 	}
 	return db
 }
+
+func CloseMySQL() {
+	sqlDB, err := db.DB()
+	if err != nil {
+		logger.Log.Errorf("获取数据库连接失败%v", err)
+		return
+	}
+	if err = sqlDB.Close(); err != nil {
+		logger.Log.Errorf("数据库关闭失败%v", err)
+	}
+}

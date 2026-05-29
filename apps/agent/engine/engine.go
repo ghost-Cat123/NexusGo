@@ -2,10 +2,8 @@ package engine
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"go-im-system/apps/agent/dao"
-	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -66,48 +64,4 @@ func PrepareAgentContext(ctx context.Context, senderID int64, message string) (*
 	fullHistory = append(fullHistory, shortTermHistory...)
 
 	return runner, session, fullHistory, nil
-}
-
-func GetAssistantFromEvents(events *adk.AsyncIterator[*adk.AgentEvent]) (<-chan string, error) {
-	outChan := make(chan string, 64)
-	go func() {
-		defer close(outChan)
-		for {
-			event, ok := events.Next()
-			if !ok {
-				break
-			}
-			if event.Err != nil {
-				logger.Log.Errorf("AI 事件流解析报错: %v", event.Err)
-			}
-			if event.Output == nil || event.Output.MessageOutput == nil {
-				continue
-			}
-			mv := event.Output.MessageOutput
-			if mv.Role != schema.Assistant {
-				continue
-			}
-			if mv.IsStreaming {
-				mv.MessageStream.SetAutomaticClose()
-				for {
-					frame, err := mv.MessageStream.Recv()
-					if errors.Is(err, io.EOF) {
-						break
-					}
-					if err != nil {
-						logger.Log.Errorf("接收流式帧报错: %v", err)
-						break
-					}
-					if frame != nil && frame.Content != "" {
-						outChan <- frame.Content
-					}
-				}
-				continue
-			}
-			if mv.Message != nil && mv.Message.Content != "" {
-				outChan <- mv.Message.Content
-			}
-		}
-	}()
-	return outChan, nil
 }

@@ -41,3 +41,10 @@ func GetCache() *redis.Client {
 	}
 	return redisClient
 }
+
+func CloseRedis() {
+	err := redisClient.Close()
+	if err != nil {
+		logger.Log.Errorf("Redis关闭失败%v", err)
+	}
+}

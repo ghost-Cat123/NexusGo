@@ -11,6 +11,10 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
+func init() {
+	callbacks.AppendGlobalHandlers(&TraceLoggerCallback{})
+}
+
 type TraceLoggerCallback struct {
 	// 继承基础 Handler，这样你就不需要实现所有的几十个接口，只需重写你关心的
 	callbacks.Handler
@@ -75,7 +79,7 @@ func (c *TraceLoggerCallback) OnEndWithStreamOutput(ctx context.Context, info *c
 
 			// 循环结束，打印最终拿到的 Token
 			if finalUsage != nil {
-				logger.Log.Infof("📊 [Model Trace] Token消耗 | Input: %d, Output: %d, Total: %d",
+				logger.Log.Infof("[Model Trace] Token消耗 | Input: %d, Output: %d, Total: %d",
 					finalUsage.PromptTokens, finalUsage.CompletionTokens, finalUsage.TotalTokens)
 			}
 		}()
