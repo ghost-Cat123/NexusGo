@@ -1,13 +1,12 @@
 module go-im-system
 
-go 1.25.8
+go 1.26.3
 
 replace geeRPC => ./apps/pkg/geeRPC
 
 require (
 	github.com/cloudwego/eino v0.8.5
 	github.com/cloudwego/eino-ext/components/embedding/dashscope v0.0.0-20260523100706-3a34358d6fd1
-	github.com/cloudwego/eino-ext/components/indexer/milvus v0.0.0-20260525035716-1372ee451d05
 	github.com/cloudwego/eino-ext/components/indexer/milvus2 v0.0.0-20260525035716-1372ee451d05
 	github.com/cloudwego/eino-ext/components/model/deepseek v0.1.2
 	github.com/cloudwego/eino-ext/components/retriever/milvus2 v0.1.0
@@ -15,6 +14,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/kaptinlin/jsonrepair v0.4.5
 	github.com/milvus-io/milvus/client/v2 v2.6.1
 	github.com/rabbitmq/amqp091-go v1.11.0
 	github.com/robfig/cron/v3 v3.0.1
@@ -60,6 +60,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
 	github.com/getsentry/sentry-go v0.12.0 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
+	github.com/go-json-experiment/json v0.0.0-20260520185125-572e7c383686 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -96,7 +97,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/meguminnnnnnnnn/go-openai v0.1.2 // indirect
 	github.com/milvus-io/milvus-proto/go-api/v2 v2.6.3 // indirect
-	github.com/milvus-io/milvus-sdk-go/v2 v2.4.2 // indirect
 	github.com/milvus-io/milvus/pkg/v2 v2.6.3 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect

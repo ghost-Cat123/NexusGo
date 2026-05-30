@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go-im-system/apps/agent/dao"
 	"go-im-system/apps/agent/engine"
+	sseevent "go-im-system/apps/agent/event"
 	"go-im-system/apps/agent/middleware"
 	"go-im-system/apps/agent/models"
 	"go-im-system/apps/pkg/logger"
@@ -18,6 +19,19 @@ import (
 	"strconv"
 	"time"
 )
+
+// 以JSON格式将事件写入SSE，返回写入错误
+func writeSSEEvent(w io.Writer, eventType sseevent.EventType, payload any, flusher http.Flusher) error {
+	data, _ := json.Marshal(map[string]any{
+		"type": string(eventType),
+		"data": payload,
+	})
+	if _, err := fmt.Fprintf(w, "data: %s\n\n", string(data)); err != nil {
+		return err
+	}
+	flusher.Flush()
+	return nil
+}
 
 func ChatSSE(c *gin.Context) {
 	// 提取请求参数
@@ -41,9 +55,8 @@ func ChatSSE(c *gin.Context) {
 	runner, session, history, err := engine.PrepareAgentContext(ctx, senderId, message)
 	if err != nil {
 		logger.Log.Errorf("[SSE] 准备上下文失败: %v", err)
-		_, _ = fmt.Fprintf(c.Writer, "data: AI服务初始化失败，请稍后重试\n\n")
-		_, _ = fmt.Fprintf(c.Writer, "data: [DONE]\n\n")
-		flusher.Flush()
+		_ = writeSSEEvent(c.Writer, sseevent.EventError, "AI服务初始化失败，请稍后重试", flusher)
+		_ = writeSSEEvent(c.Writer, sseevent.EventDone, nil, flusher)
 		return
 	}
 	// 生成唯一checkpointID (和redis的sessionID不一样)
@@ -70,7 +83,10 @@ func ChatSSE(c *gin.Context) {
 		}
 		// 中断检测
 		if event.Action != nil && event.Action.Interrupted != nil {
-			sendInterruptEvent(c.Writer, event, checkPointID, flusher)
+			if err := sendInterruptEvent(c.Writer, event, checkPointID, flusher); err != nil {
+				logger.Log.Warnf("[SSE] 客户端断开，停止推送: user=%d", senderId)
+				return
+			}
 
 			sessionCh := engine.RegisterSessionChan(checkPointID)
 			var result *middleware.ApprovalResult
@@ -91,49 +107,92 @@ func ChatSSE(c *gin.Context) {
 		}
 
 		// 提取文本内容
-		mv := event.Output.MessageOutput
-		if mv == nil || mv.Role != schema.Assistant {
+		if event.Output == nil || event.Output.MessageOutput == nil {
 			continue
 		}
-		if mv.IsStreaming {
-			// 流式消息
-			mv.MessageStream.SetAutomaticClose()
-			for {
-				frame, err := mv.MessageStream.Recv()
-				if errors.Is(err, io.EOF) {
-					break
+		mv := event.Output.MessageOutput
+
+		switch mv.Role {
+		case schema.Assistant:
+			if mv.IsStreaming {
+				// 流式消息 逐chunk解析
+				mv.MessageStream.SetAutomaticClose()
+				var fullMsg *schema.Message
+				for {
+					frame, err := mv.MessageStream.Recv()
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					if err != nil {
+						logger.Log.Errorf("[SSE] 读取流式帧报错: %v", err)
+						break
+					}
+					fullMsg = frame
+					// 思考模式的内容
+					if frame.ReasoningContent != "" {
+						if err := writeSSEEvent(c.Writer, sseevent.EventReasoningChunk, frame.ReasoningContent, flusher); err != nil {
+							logger.Log.Warnf("[SSE] 客户端断开，停止推送: user=%d", senderId)
+							return
+						}
+					}
+					// 正常输出消息内容
+					if frame != nil && frame.Content != "" {
+						fullText += frame.Content
+						if err := writeSSEEvent(c.Writer, sseevent.EventStreamChunk, frame.Content, flusher); err != nil {
+							logger.Log.Warnf("[SSE] 客户端断开，停止推送: user=%d", senderId)
+							return
+						}
+					}
 				}
-				if err != nil {
-					logger.Log.Errorf("[SSE] 读取流式帧报错: %v", err)
-					break
+				// 流结束后，检查是否有工具调用
+				if fullMsg != nil && len(fullMsg.ToolCalls) > 0 {
+					for _, tc := range fullMsg.ToolCalls {
+						if err := writeSSEEvent(c.Writer, sseevent.EventToolCall, map[string]string{
+							"tool": tc.Function.Name,
+							"args": tc.Function.Arguments,
+						}, flusher); err != nil {
+							logger.Log.Warnf("[SSE] 客户端断开，停止推送: user=%d", senderId)
+							return
+						}
+					}
 				}
-				if frame != nil && frame.Content != "" {
-					fullText += frame.Content
-					if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", frame.Content); err != nil {
+			} else if mv.Message != nil {
+				// 非流式信息
+				fullText += mv.Message.Content
+				if err := writeSSEEvent(c.Writer, sseevent.EventStreamChunk, mv.Message.Content, flusher); err != nil {
+					logger.Log.Warnf("[SSE] 客户端断开，停止推送: user=%d", senderId)
+					return
+				}
+				// 处理工具调用
+				for _, tc := range mv.Message.ToolCalls {
+					if err := writeSSEEvent(c.Writer, sseevent.EventToolCall, map[string]string{
+						"tool": tc.Function.Name,
+						"args": tc.Function.Arguments,
+					}, flusher); err != nil {
 						logger.Log.Warnf("[SSE] 客户端断开，停止推送: user=%d", senderId)
 						return
 					}
-					flusher.Flush()
 				}
 			}
-		} else if mv.Message != nil && mv.Message.Content != "" {
-			// 非流式信息
-			fullText += mv.Message.Content
-			if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", mv.Message.Content); err != nil {
+		case schema.Tool:
+			// 工具执行结果
+			if err := writeSSEEvent(c.Writer, sseevent.EventToolResult, map[string]string{
+				"tool":   mv.ToolName,
+				"result": mv.Message.Content,
+			}, flusher); err != nil {
 				logger.Log.Warnf("[SSE] 客户端断开，停止推送: user=%d", senderId)
 				return
 			}
-			flusher.Flush()
 		}
 	}
-	if fullText == "" {
-		_, _ = fmt.Fprintf(c.Writer, "data: [DONE]\n\n")
-		flusher.Flush()
+
+	if err := writeSSEEvent(c.Writer, sseevent.EventDone, nil, flusher); err != nil {
+		logger.Log.Warnf("[SSE] 客户端断开，停止推送: user=%d", senderId)
 		return
 	}
-	// [DONE] 结束符
-	_, _ = fmt.Fprintf(c.Writer, "data: [DONE]\n\n")
-	flusher.Flush()
+	if fullText == "" {
+		return
+	}
 
 	// 异步落库AI消息， 更新Redis Session
 	go func() {
@@ -163,22 +222,20 @@ func buildTargets(interrupts []*adk.InterruptCtx, result *middleware.ApprovalRes
 	return targets
 }
 
-func sendInterruptEvent(w io.Writer, event *adk.AgentEvent, checkpointID string, flusher http.Flusher) {
+func sendInterruptEvent(w io.Writer, event *adk.AgentEvent, checkpointID string, flusher http.Flusher) error {
 	for _, ic := range event.Action.Interrupted.InterruptContexts {
 		info, ok := ic.Info.(*middleware.ApprovalInfo)
 		if !ok {
 			logger.Log.Errorf("提取中断Info失败")
+			continue
 		}
-		data, _ := json.Marshal(map[string]any{
-			"type": "interrupt",
-			// 对应的中断id
+		if err := writeSSEEvent(w, sseevent.EventInterrupt, map[string]any{
 			"checkpoint_id": checkpointID,
-			// 中间件传输的ApprovalInfo 供前端展示用
-			"tool_name": info.ToolName,
-			"arguments": info.ArgumentsInJson,
-		})
-		// 通过SSE告知客户端中断信息
-		_, _ = fmt.Fprintf(w, "data: %s\n\n", string(data))
-		flusher.Flush()
+			"tool_name":     info.ToolName,
+			"arguments":     info.ArgumentsInJson,
+		}, flusher); err != nil {
+			return err
+		}
 	}
+	return nil
 }

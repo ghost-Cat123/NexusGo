@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"go-im-system/apps/agent/dao"
 	"time"
 
@@ -47,26 +48,27 @@ type Session struct {
 	Store  *RedisStore
 }
 
+var appendScript = redis.NewScript(`
+	redis.call('RPush', KEYS[1], ARGV[1])
+	redis.call('EXPIRE', KEYS[1], ARGV[2])
+	return 1
+`)
+
 // Append 将一条消息追加到 Redis List，并在达到阈值时异步触发摘要压缩
 func (s *Session) Append(ctx context.Context, msg *schema.Message) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
-		return fmt.Errorf("消息序列化失败: %w", err)
+		return fmt.Errorf("[Memory] 消息序列化失败: %w", err)
 	}
-
-	pipe := cache.GetCache().Pipeline()
-	pipe.RPush(ctx, s.Key, data)
-	pipe.Expire(ctx, s.Key, s.Store.TTL)
-	if _, err = pipe.Exec(ctx); err != nil {
-		return fmt.Errorf("redis Pipeline 执行失败: %w", err)
+	_, err = appendScript.Run(ctx, cache.GetCache(), []string{s.Key}, data, int64(s.Store.TTL.Seconds())).Result()
+	if err != nil {
+		return fmt.Errorf("[Memory] 消息追加失败: %w", err)
 	}
-
 	// 检查是否需要触发摘要压缩（异步，不阻塞当前请求）
 	count, _ := cache.GetCache().LLen(ctx, s.Key).Result()
 	if count >= WindowSize {
 		go s.triggerSummaryCompress()
 	}
-
 	return nil
 }
 
@@ -86,6 +88,13 @@ func (s *Session) GetMessages(ctx context.Context) ([]*schema.Message, error) {
 	}
 	return history, nil
 }
+
+var summaryScript = redis.NewScript(`
+	redis.call('LTRIM', KEYS[1], ARGV[2], -1)
+	redis.call('LPUSH', KEYS[1], ARGV[1])
+	redis.call('EXPIRE', KEYS[1], ARGV[3])
+	return 1
+`)
 
 // triggerSummaryCompress 从 Redis 取出最旧的一批消息，调用 LLM 摘要，写入 MySQL，并替换 Redis 中的旧消息
 // 此函数在独立 goroutine 中运行，使用 Background context 与请求生命周期解耦
@@ -133,14 +142,10 @@ func (s *Session) triggerSummaryCompress() {
 	summaryMsg := schema.SystemMessage(fmt.Sprintf("[历史摘要] %s", summary))
 	summaryData, _ := json.Marshal(summaryMsg)
 
-	pipe := cache.GetCache().Pipeline()
-	pipe.LTrim(ctx, s.Key, int64(toCompress), -1) // 删去旧消息
-	pipe.LPush(ctx, s.Key, summaryData)           // 头部插入摘要
-	pipe.Expire(ctx, s.Key, s.Store.TTL)          // 设置过期时间
-	if _, err = pipe.Exec(ctx); err != nil {
+	_, err = summaryScript.Run(ctx, cache.GetCache(), []string{s.Key}, summaryData, toCompress, int64(s.Store.TTL.Seconds())).Result()
+	if err != nil {
 		logger.Log.Errorf("[Memory] 压缩后 Redis 更新失败: %v", err)
 		return
 	}
-
 	logger.Log.Infof("[Memory] 用户 [%d] 摘要压缩完成，压缩了 %d 条消息", s.UserID, toCompress)
 }

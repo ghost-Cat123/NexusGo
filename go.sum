@@ -49,8 +49,6 @@ github.com/cloudwego/eino v0.8.5 h1:ZNRJBiOW8eEOxMKjR4KbxW9Px9+DtETi8k7Yk1cuzv8=
 github.com/cloudwego/eino v0.8.5/go.mod h1:+2N4nsMPxA6kGBHpH+75JuTfEcGprAMTdsZESrShKpU=
 github.com/cloudwego/eino-ext/components/embedding/dashscope v0.0.0-20260523100706-3a34358d6fd1 h1:0jKp2dhxZwP0lwdsu8HhvgJkQ+4QAN5M+RLfcclfC3Y=
 github.com/cloudwego/eino-ext/components/embedding/dashscope v0.0.0-20260523100706-3a34358d6fd1/go.mod h1:2+QiYa7tPp1u70Hh3xfDandzsZdMmANvRTWAgCTrCYo=
-github.com/cloudwego/eino-ext/components/indexer/milvus v0.0.0-20260525035716-1372ee451d05 h1:PrFM2dwJzZk44UDmOIkqkFlSdPg2ugp3BeXiYeidJJY=
-github.com/cloudwego/eino-ext/components/indexer/milvus v0.0.0-20260525035716-1372ee451d05/go.mod h1:rePle18XO8MDdtFgXttBUPJDkxzVra5Da9EuJ8GwZOg=
 github.com/cloudwego/eino-ext/components/indexer/milvus2 v0.0.0-20260525035716-1372ee451d05 h1:fCuV0YV2meh9XvXn/eMw7f4fkLgSvAdnm0iKRA7YAig=
 github.com/cloudwego/eino-ext/components/indexer/milvus2 v0.0.0-20260525035716-1372ee451d05/go.mod h1:6+N5OCZrRkr8cUvTtbsEAhVAQvcVebzkh1LYRR76Lgo=
 github.com/cloudwego/eino-ext/components/model/deepseek v0.1.2 h1:PSHIDLUOv3ZCO7G6ZXnuJWb5pvRZV6xnfLLbwbfY704=
@@ -134,8 +132,8 @@ github.com/go-check/check v0.0.0-20180628173108-788fd7840127 h1:0gkP6mzaMqkmpcJY
 github.com/go-check/check v0.0.0-20180628173108-788fd7840127/go.mod h1:9ES+weclKsC9YodN5RgxqK/VD9HM9JsCSh7rNhMZE98=
 github.com/go-errors/errors v1.0.1 h1:LUHzmkK3GUKUrL/1gfBUxAHzcev3apQlezX/+O7ma6w=
 github.com/go-errors/errors v1.0.1/go.mod h1:f4zRHt4oKfwPJE5k8C9vpYG+aDHdBFUsgrm6/TyX73Q=
-github.com/go-faker/faker/v4 v4.1.0 h1:ffuWmpDrducIUOO0QSKSF5Q2dxAht+dhsT9FvVHhPEI=
-github.com/go-faker/faker/v4 v4.1.0/go.mod h1:uuNc0PSRxF8nMgjGrrrU4Nw5cF30Jc6Kd0/FUTTYbhg=
+github.com/go-json-experiment/json v0.0.0-20260520185125-572e7c383686 h1:NZBJxCpbHS1gzS6xAmyxbJznosZIIPk9IB42v62UvKA=
+github.com/go-json-experiment/json v0.0.0-20260520185125-572e7c383686/go.mod h1:tphK2c80bpPhMOI4v6bIc2xWywPfbqi1Z06+RcrMkDg=
 github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 github.com/go-logfmt/logfmt v0.4.0/go.mod h1:3RMwSq7FuexP4Kalkev3ejPJsZTpXXBr9+V4qmtdjCk=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
@@ -264,6 +262,8 @@ github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHm
 github.com/jtolds/gls v4.20.0+incompatible h1:xdiiI2gbIgH/gLH7ADydsJ1uDOEzR8yvV7C0MuV77Wo=
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
 github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88/go.mod h1:3w7q1U84EfirKl04SVQ/s7nPm1ZPhiXd34z40TNz36k=
+github.com/kaptinlin/jsonrepair v0.4.5 h1:+q9eIWRrRY3LqmEjzJah85F9JgqC4JZtwpQeJA1Npn4=
+github.com/kaptinlin/jsonrepair v0.4.5/go.mod h1:tDzdStJSAozpPAhZrhNDq0TVaxTQpEs/3adqH11Rsj0=
 github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0/go.mod h1:1NbS8ALrpOvjt0rHPNLyCIeMtbizbir8U//inJ+zuB8=
 github.com/kataras/golog v0.0.10/go.mod h1:yJ8YKCmyL+nWjERB90Qwn+bdyBZsaQwU3bTVFgkFIp8=
 github.com/kataras/iris/v12 v12.1.8/go.mod h1:LMYy4VlP67TQ3Zgriz8RE2h2kMZV2SgMYbq3UhfoFmE=
@@ -321,8 +321,6 @@ github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b/go.mod h1:01TrycV0kFyex
 github.com/microcosm-cc/bluemonday v1.0.2/go.mod h1:iVP4YcDBq+n/5fb23BhYFvIMq/leAFZyRl6bYmGDlGc=
 github.com/milvus-io/milvus-proto/go-api/v2 v2.6.3 h1:w7IBrU25KULWNlHKoKwx6ruTsDAmzrWknotIc6A4ys4=
 github.com/milvus-io/milvus-proto/go-api/v2 v2.6.3/go.mod h1:/6UT4zZl6awVeXLeE7UGDWZvXj3IWkRsh3mqsn0DiAs=
-github.com/milvus-io/milvus-sdk-go/v2 v2.4.2 h1:Xqf+S7iicElwYoS2Zly8Nf/zKHuZsNy1xQajfdtygVY=
-github.com/milvus-io/milvus-sdk-go/v2 v2.4.2/go.mod h1:ulO1YUXKH0PGg50q27grw048GDY9ayB4FPmh7D+FFTA=
 github.com/milvus-io/milvus/client/v2 v2.6.1 h1:JGV+2JoZypc0ORnVj41ZWLdz9EpBGcwXCliIFXFW1f4=
 github.com/milvus-io/milvus/client/v2 v2.6.1/go.mod h1:MnickP646pUKhfOS4JQD3uMUukDXhJKpdTXk467MXuU=
 github.com/milvus-io/milvus/pkg/v2 v2.6.3 h1:WDf4mXFWL5Sk/V87yLwRKq24MYMkjS2YA6qraXbLbJA=
@@ -728,8 +726,6 @@ google.golang.org/grpc v1.33.1/go.mod h1:fr5YgcSWrqhRRxogOsw7RzIpsmvOZ6IcH4kBYTp
 google.golang.org/grpc v1.38.0/go.mod h1:NREThFqKR1f3iQ6oBuvc5LadQuXVGo9rkm5ZGrQdJfM=
 google.golang.org/grpc v1.73.0 h1:VIWSmpI2MegBtTuFt5/JWy2oXxtjJ/e89Z70ImfD2ok=
 google.golang.org/grpc v1.73.0/go.mod h1:50sbHOUqWoCQGI8V2HQLJM0B+LMlIUjNSZmow7EVBQc=
-google.golang.org/grpc/examples v0.0.0-20220617181431-3e7b97febc7f h1:rqzndB2lIQGivcXdTuY3Y9NBvr70X+y77woofSRluec=
-google.golang.org/grpc/examples v0.0.0-20220617181431-3e7b97febc7f/go.mod h1:gxndsbNG1n4TZcHGgsYEfVGnTxqfEdfiDv6/DADXX9o=
 google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
 google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
 google.golang.org/protobuf v0.0.0-20200228230310-ab0ca4ff8a60/go.mod h1:cfTl7dwQJ+fmap5saPgwCLgHXTUD7jkjRqWcaiX5VyM=

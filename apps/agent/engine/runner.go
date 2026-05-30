@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudwego/eino-ext/components/model/deepseek"
 	"github.com/cloudwego/eino/adk"
+	"github.com/cloudwego/eino/adk/middlewares/patchtoolcalls"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
 	"go-im-system/apps/agent/memory"
@@ -21,6 +22,10 @@ var (
 	runnerMu    sync.Mutex
 	runnerOnce  sync.Once
 )
+
+const instruction = "You are a helpful assistant."
+const maxIterations = 5
+const maxRetries = 5
 
 func GetAgentGraphRunner(ctx context.Context) (*adk.Runner, error) {
 	// 快速路径
@@ -47,8 +52,23 @@ func GetAgentGraphRunner(ctx context.Context) (*adk.Runner, error) {
 }
 
 func buildRunner(ctx context.Context) (*adk.Runner, error) {
+	cm, err := buildChatModel(ctx)
+	if err != nil {
+		return nil, err
+	}
+	agent, err := buildAgent(ctx, cm)
+	if err != nil {
+		return nil, err
+	}
+	return adk.NewRunner(ctx, adk.RunnerConfig{
+		Agent:           agent,
+		EnableStreaming: true,
+		CheckPointStore: memory.NewCheckPointStore(),
+	}), nil
+}
+
+func buildChatModel(ctx context.Context) (*deepseek.ChatModel, error) {
 	defaultAgent := config.GetDefaultAgent()
-	instruction := "You are a helpful assistant."
 	apiKey := config.ResolveAgentAPIKey(defaultAgent)
 	if apiKey == "" {
 		return nil, fmt.Errorf("AI API Key 为空，请在 apps/config.yaml 填写 agent.providers.%s.api_key 或设置环境变量 DEEPSEEK_API_KEY", config.GlobalConfig.Agent.Default)
@@ -64,6 +84,15 @@ func buildRunner(ctx context.Context) (*adk.Runner, error) {
 		return nil, fmt.Errorf("init model failed: %w", err)
 	}
 	logger.Log.Infof("AI 模型初始化成功，provider=%s model=%s", config.GlobalConfig.Agent.Default, defaultAgent.ModelName)
+	return cm, nil
+}
+
+func buildAgent(ctx context.Context, cm *deepseek.ChatModel) (*adk.ChatModelAgent, error) {
+	// 声明内置中间件
+	patchToolMiddleware, err := patchtoolcalls.New(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("初始化内置中间件失败: %w", err)
+	}
 	// 创建Agent
 	agent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
 		Name:        "IM-System-Agent",
@@ -71,11 +100,15 @@ func buildRunner(ctx context.Context) (*adk.Runner, error) {
 		Model:       cm,
 		Instruction: instruction,
 
-		MaxIterations: 5,
+		MaxIterations: maxIterations,
+
 		Handlers: []adk.ChatModelAgentMiddleware{
-			&middleware.RateLimitMiddleware{},
-			&middleware.ApprovalMiddleware{},
-			&middleware.SafeAgentMiddleware{},
+			patchToolMiddleware,                  // 修复工具调用 ID 一致性
+			&middleware.AutoContinueMiddleware{}, // AfterModel: 截断续写
+			&middleware.TrimResultMiddleWare{},   // BeforeModel: 裁剪旧结果
+			&middleware.RateLimitMiddleware{},    // BeforeAgent: 限流
+			&middleware.ApprovalMiddleware{},     // WrapInvokable: 审批
+			&middleware.SafeAgentMiddleware{},    // WrapModel + WrapTool: 兜底
 		},
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
@@ -83,10 +116,13 @@ func buildRunner(ctx context.Context) (*adk.Runner, error) {
 					tools.MustSearchHistoryTool(),
 					tools.MustSchMessageTool(),
 				},
+				ToolCallMiddlewares: []compose.ToolMiddleware{
+					middleware.ToolFixMiddleware(),
+				},
 			},
 		},
 		ModelRetryConfig: &adk.ModelRetryConfig{
-			MaxRetries: 5,
+			MaxRetries: maxRetries,
 			IsRetryAble: func(_ context.Context, err error) bool {
 				return strings.Contains(err.Error(), "429") ||
 					strings.Contains(err.Error(), "Too Many Requests") ||
@@ -95,11 +131,7 @@ func buildRunner(ctx context.Context) (*adk.Runner, error) {
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("初始化Agent失败: %w", err)
 	}
-	return adk.NewRunner(ctx, adk.RunnerConfig{
-		Agent:           agent,
-		EnableStreaming: true,
-		CheckPointStore: memory.NewCheckPointStore(),
-	}), nil
+	return agent, nil
 }

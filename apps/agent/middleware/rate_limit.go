@@ -37,14 +37,14 @@ func (m *RateLimitMiddleware) BeforeAgent(
 	5. 设置过期时间
 */
 var rateLimitLua = redis.NewScript(`
-redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[2])
-local count = redis.call('ZCARD', KEYS[1])
-if tonumber(count) >= tonumber(ARGV[3]) then
-    return 0
-end
-redis.call('ZADD', KEYS[1], ARGV[1], ARGV[1])
-redis.call('EXPIRE', KEYS[1], ARGV[4])
-return 1
+	redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[2])
+	local count = redis.call('ZCARD', KEYS[1])
+	if tonumber(count) >= tonumber(ARGV[3]) then
+		return 0
+	end
+	redis.call('ZADD', KEYS[1], ARGV[1], ARGV[1])
+	redis.call('EXPIRE', KEYS[1], ARGV[4])
+	return 1
 `)
 
 // 原子性限流操作
