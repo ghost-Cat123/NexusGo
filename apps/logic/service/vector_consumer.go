@@ -37,7 +37,7 @@ func consumeVectorLoop(msgs <-chan amqp.Delivery) {
 		logger.Log.Fatalf("[Vector] Embedder 初始化失败: %v", err)
 		return
 	}
-	indexer, err := vdb.GetIndxer(ctx, vdb.CollectionName, embedder)
+	indexer, err := vdb.GetIndxer(ctx, vdb.MessageCollection, embedder, vdb.MessageDocumentConverter)
 	if err != nil {
 		logger.Log.Fatalf("[Vector] Indexer 初始化失败: %v", err)
 		return

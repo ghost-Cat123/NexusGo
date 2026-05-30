@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const VectorDim int64 = 1024 // text-embedding-v3 的实际输出维度
+
 func GetEmbedder(milvusConfig config.MilvusConfig) (*dashscope.Embedder, error) {
 	ctx := context.Background()
 	timeout := 30 * time.Second

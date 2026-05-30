@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
 	"go-im-system/apps/agent/dao"
+	"go-im-system/apps/pkg/config"
+	vdb "go-im-system/apps/pkg/vector_db"
 	"time"
 
 	"github.com/cloudwego/eino/schema"
@@ -136,6 +139,11 @@ func (s *Session) triggerSummaryCompress() {
 		// 落库失败不影响继续压缩 Redis（避免 Redis 无限增长）
 	}
 
+	// 同时将摘要放入向量数据库
+	if err := embeddingMemoryToMilvus(ctx, s.UserID, s.ID, summary); err != nil {
+		logger.Log.Warnf("[Memory] Milvus 记忆索引失败已降级为普通摘要: %v", err)
+	}
+
 	// 5. 原子性替换 Redis：
 	//    - 删去已压缩的旧消息（LTrim 保留 toCompress 之后的部分）
 	//    - 在头部插入一条 SystemMessage 作为摘要占位
@@ -148,4 +156,39 @@ func (s *Session) triggerSummaryCompress() {
 		return
 	}
 	logger.Log.Infof("[Memory] 用户 [%d] 摘要压缩完成，压缩了 %d 条消息", s.UserID, toCompress)
+}
+
+func embeddingMemoryToMilvus(ctx context.Context, userID int64, sessionID string, summary string) error {
+	// 1. embedder
+	embedder, err := vdb.GetEmbedder(config.GlobalConfig.Milvus)
+	if err != nil {
+		logger.Log.Warnf("[Memory] Embedder获取失败: %v", err)
+		return err
+	}
+
+	// 2. indexer
+	indexer, err := vdb.GetIndxer(ctx, vdb.MemoryCollection, embedder, vdb.MemoryDocumentConverter)
+	if err != nil {
+		logger.Log.Warnf("[Memory] Indexer获取失败: %v", err)
+		return err
+	}
+
+	// 3. doc
+	doc := &schema.Document{
+		ID:      uuid.NewString(),
+		Content: summary,
+		MetaData: map[string]any{
+			"user_id":     userID,
+			"session_id":  sessionID,
+			"create_time": time.Now().Unix(),
+		},
+	}
+
+	// 4. 写入
+	_, err = indexer.Store(ctx, []*schema.Document{doc})
+	if err != nil {
+		logger.Log.Warnf("[Memory] 向量数据库写入失败: %v", err)
+		return err
+	}
+	return nil
 }

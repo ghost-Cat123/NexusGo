@@ -30,11 +30,17 @@ func InitClient(milvusConfig config.MilvusConfig) error {
 
 		logger.Log.Infof("向量数据库单例初始化成功！")
 
-		initErr = InitCollection()
+		initErr = InitMessageCollection()
 		if initErr != nil {
-			logger.Log.Errorf("向量数据库表初始化失败: %v", initErr)
+			logger.Log.Errorf("消息向量表初始化失败: %v", initErr)
 		} else {
-			logger.Log.Infof("向量数据库表初始化成功！")
+			logger.Log.Infof("消息向量表初始化成功！")
+		}
+		initErr = InitMemoryCollection()
+		if initErr != nil {
+			logger.Log.Errorf("记忆向量表初始化失败: %v", initErr)
+		} else {
+			logger.Log.Infof("记忆向量表初始化成功！")
 		}
 	})
 	return initErr

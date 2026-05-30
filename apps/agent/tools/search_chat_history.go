@@ -137,7 +137,7 @@ func semanticFallback(ctx context.Context, currentUserID int64, keywords string,
 
 	// 输出字段
 	outputFields := []string{"msg_id", "sender_id", "send_time"}
-	retriever, err := vdb.GetRetriever(ctx, vdb.CollectionName, "embedding", outputFields, 5, embedder)
+	retriever, err := vdb.GetRetriever(ctx, vdb.MessageCollection, "embedding", outputFields, 5, embedder)
 
 	if err != nil {
 		fmt.Printf("[Search] Retriever 初始化失败: %v\n", err)

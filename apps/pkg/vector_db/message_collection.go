@@ -9,8 +9,7 @@ import (
 	"time"
 )
 
-const CollectionName = "message_vectors"
-const VectorDim int64 = 1024 // text-embedding-v3 的实际输出维度
+const MessageCollection = "message_vectors"
 
 // MessageFields 向量数据库表字段
 var MessageFields = []*entity.Field{
@@ -21,17 +20,17 @@ var MessageFields = []*entity.Field{
 	entity.NewField().WithName("embedding").WithDataType(entity.FieldTypeFloatVector).WithDim(VectorDim),
 }
 
-func InitCollection() error {
+func InitMessageCollection() error {
 	// 【关键修改 2】：建表同样加上超时
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	exists, err := milvusCli.HasCollection(ctx, milvusclient.NewHasCollectionOption(CollectionName))
+	exists, err := milvusCli.HasCollection(ctx, milvusclient.NewHasCollectionOption(MessageCollection))
 	if err != nil {
 		return err
 	}
 	if exists {
-		logger.Log.Infof("Collection %s already exists", CollectionName)
+		logger.Log.Infof("Collection %s already exists", MessageCollection)
 		return nil
 	}
 
@@ -40,16 +39,16 @@ func InitCollection() error {
 		schema.WithField(f)
 	}
 
-	if err := milvusCli.CreateCollection(ctx, milvusclient.NewCreateCollectionOption(CollectionName, schema)); err != nil {
+	if err := milvusCli.CreateCollection(ctx, milvusclient.NewCreateCollectionOption(MessageCollection, schema)); err != nil {
 		return err
 	}
 
 	idx := index.NewHNSWIndex(entity.COSINE, 8, 200)
-	if _, err := milvusCli.CreateIndex(ctx, milvusclient.NewCreateIndexOption(CollectionName, "embedding", idx)); err != nil {
+	if _, err := milvusCli.CreateIndex(ctx, milvusclient.NewCreateIndexOption(MessageCollection, "embedding", idx)); err != nil {
 		return err
 	}
 
-	loadTask, err := milvusCli.LoadCollection(ctx, milvusclient.NewLoadCollectionOption(CollectionName))
+	loadTask, err := milvusCli.LoadCollection(ctx, milvusclient.NewLoadCollectionOption(MessageCollection))
 	if err != nil {
 		return err
 	}
@@ -57,6 +56,6 @@ func InitCollection() error {
 		return err
 	}
 
-	logger.Log.Infof("Milvus Collection [%s] 初始化并加载成功！", CollectionName)
+	logger.Log.Infof("Milvus Collection [%s] 初始化并加载成功！", MessageCollection)
 	return nil
 }

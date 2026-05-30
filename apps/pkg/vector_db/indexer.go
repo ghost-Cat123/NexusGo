@@ -8,7 +8,8 @@ import (
 	"github.com/milvus-io/milvus/client/v2/column"
 )
 
-func GetIndxer(ctx context.Context, collectionName string, embedder embedding.Embedder) (*milvusidex.Indexer, error) {
+func GetIndxer(ctx context.Context, collectionName string, embedder embedding.Embedder,
+	documentConverter func(context.Context, []*schema.Document, [][]float64) ([]column.Column, error)) (*milvusidex.Indexer, error) {
 	return milvusidex.NewIndexer(ctx, &milvusidex.IndexerConfig{
 		Client:     milvusCli,
 		Collection: collectionName,
@@ -19,11 +20,11 @@ func GetIndxer(ctx context.Context, collectionName string, embedder embedding.Em
 			IndexBuilder: milvusidex.NewHNSWIndexBuilder().WithM(8).WithEfConstruction(200),
 		},
 		Embedding:         embedder,
-		DocumentConverter: messageDocumentConverter,
+		DocumentConverter: documentConverter,
 	})
 }
 
-func messageDocumentConverter(ctx context.Context, docs []*schema.Document, vectors [][]float64) ([]column.Column, error) {
+func MessageDocumentConverter(_ context.Context, docs []*schema.Document, vectors [][]float64) ([]column.Column, error) {
 	msgIDs := make([]string, len(docs)) // 【改动 1】
 	convIDs := make([]string, len(docs))
 	senderIDs := make([]int64, len(docs))
@@ -48,6 +49,35 @@ func messageDocumentConverter(ctx context.Context, docs []*schema.Document, vect
 		column.NewColumnVarChar("conv_id", convIDs),
 		column.NewColumnInt64("sender_id", senderIDs),
 		column.NewColumnInt64("send_time", senderTimes),
+		column.NewColumnFloatVector("embedding", int(VectorDim), embeddings),
+	}, nil
+}
+
+func MemoryDocumentConverter(_ context.Context, docs []*schema.Document, vectors [][]float64) ([]column.Column, error) {
+	memoryIDs := make([]string, len(docs))
+	userIDs := make([]int64, len(docs))
+	sessionIDs := make([]string, len(docs))
+	summary := make([]string, len(docs))
+	createTimes := make([]int64, len(docs))
+	embeddings := make([][]float32, len(docs))
+	for i, doc := range docs {
+		memoryIDs[i] = doc.ID
+		summary[i] = doc.Content
+		userIDs[i] = doc.MetaData["user_id"].(int64)
+		sessionIDs[i] = doc.MetaData["session_id"].(string)
+		createTimes[i] = doc.MetaData["create_time"].(int64)
+		emb := make([]float32, len(vectors[i]))
+		for j, v := range vectors[i] {
+			emb[j] = float32(v)
+		}
+		embeddings[i] = emb
+	}
+	return []column.Column{
+		column.NewColumnVarChar("memory_id", memoryIDs),
+		column.NewColumnInt64("user_id", userIDs),
+		column.NewColumnVarChar("session_id", sessionIDs),
+		column.NewColumnVarChar("summary", summary),
+		column.NewColumnInt64("create_time", createTimes),
 		column.NewColumnFloatVector("embedding", int(VectorDim), embeddings),
 	}, nil
 }

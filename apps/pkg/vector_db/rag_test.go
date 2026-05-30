@@ -20,19 +20,13 @@ func TestVectorDatabaseRAG(t *testing.T) {
 	// 0. 初始化日志系统 (修复空指针的关键！)
 	logger.InitLogger()
 	// 1. 手动配置测试环境
-	config.GlobalConfig = &config.Config{ // <- 加上这行分配内存
-		Milvus: config.MilvusConfig{
-			Addr:      "127.0.0.1:19530",
-			ModelName: "text-embedding-v3",
-			APIKey:    "sk-084234e841134281a7025f8593e1a99b",
-		},
-	}
+
 	vectorDbInitErr := InitClient(config.GlobalConfig.Milvus)
 	if vectorDbInitErr != nil {
 		logger.Log.Fatalf("连接向量数据库失败: %v", vectorDbInitErr)
 	}
 	// 2. 初始化 Milvus 连接并确保 Collection 存在
-	if err := InitCollection(); err != nil {
+	if err := InitMessageCollection(); err != nil {
 		t.Fatalf("InitCollection 失败: %v", err)
 	}
 	// 3. 获取 Embedder、Indexer、Retriever
@@ -40,14 +34,14 @@ func TestVectorDatabaseRAG(t *testing.T) {
 	if err != nil {
 		t.Fatalf("获取 Embedder 失败: %v", err)
 	}
-	indexer, err := GetIndxer(ctx, CollectionName, embedder) // 注意：如果你改了函数名叫 GetIndexer 请对应修改
+	indexer, err := GetIndxer(ctx, MessageCollection, embedder, MessageDocumentConverter) // 注意：如果你改了函数名叫 GetIndexer 请对应修改
 	if err != nil {
 		t.Fatalf("获取 Indexer 失败: %v", err)
 	}
 
 	// 输出字段
 	outputFields := []string{"msg_id", "sender_id", "send_time"}
-	retriever, err := GetRetriever(ctx, CollectionName, "embedding", outputFields, 1, embedder)
+	retriever, err := GetRetriever(ctx, MessageCollection, "embedding", outputFields, 1, embedder)
 	if err != nil {
 		t.Fatalf("获取 Retriever 失败: %v", err)
 	}
