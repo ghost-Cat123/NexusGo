@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"NexusGo/apps/agent/engine"
+	"NexusGo/apps/agent/middleware"
 	"github.com/gin-gonic/gin"
-	"go-im-system/apps/agent/engine"
-	"go-im-system/apps/agent/middleware"
 	"net/http"
 	"strconv"
 )

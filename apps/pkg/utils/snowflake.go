@@ -1,8 +1,8 @@
 package utils
 
 import (
+	"NexusGo/apps/pkg/logger"
 	"fmt"
-	"go-im-system/apps/pkg/logger"
 	"sync"
 	"time"
 )

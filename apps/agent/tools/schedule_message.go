@@ -1,12 +1,12 @@
 package tools
 
 import (
+	"NexusGo/apps/agent/dao"
+	"NexusGo/apps/agent/models"
 	"context"
 	"fmt"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
-	"go-im-system/apps/agent/dao"
-	"go-im-system/apps/agent/models"
 	"time"
 )
 
@@ -29,9 +29,8 @@ func schMessageInvoker(ctx context.Context, req *SchMessageReq) (*SchMessageResp
 		return &SchMessageResp{Result: fmt.Sprintf("时间格式解析失败: %v，请告诉我发送的具体日期和时间，例如'明天早上9点'。", err)}, nil
 	}
 
-	// 时间是否在过去
 	if sendTime.Before(time.Now()) {
-		return &SchMessageResp{Result: fmt.Sprintf("时间已经过去了，请设定一个未来的时间。")}, err
+		return &SchMessageResp{Result: fmt.Sprintf("时间已经过去了，请设定一个未来的时间。")}, nil
 	}
 
 	currentUserID, ok := ctx.Value("current_user_id").(int64)
@@ -39,28 +38,42 @@ func schMessageInvoker(ctx context.Context, req *SchMessageReq) (*SchMessageResp
 		return nil, fmt.Errorf("internal error: missing user context")
 	}
 
-	// 查询发送的目标Id
-	targetUser, err := dao.FindUserByName(req.TargetUser)
-	if err != nil {
-		return &SchMessageResp{Result: fmt.Sprintf("未找到用户 '%s'，请检查用户名。", req.TargetUser)}, nil
+	var receiverID, groupID int64
+	var targetName string
+
+	if req.GroupName != "" {
+		group, err := dao.FindGroupByName(req.GroupName)
+		if err != nil {
+			return &SchMessageResp{Result: fmt.Sprintf("未找到群 '%s'，请检查群名称。", req.GroupName)}, nil
+		}
+		groupID = group.GroupID
+		targetName = group.GroupName
+	} else {
+		targetUser, err := dao.FindUserByName(req.TargetUser)
+		if err != nil {
+			return &SchMessageResp{Result: fmt.Sprintf("未找到用户 '%s'，请检查用户名。", req.TargetUser)}, nil
+		}
+		receiverID = targetUser.UserId
+		targetName = targetUser.Username
 	}
 
-	taskId, err := dao.CreateScheduledMessage(&models.ScheduledMessages{
+	task := &models.ScheduledMessages{
 		CreatorId:         currentUserID,
-		ReceiverId:        targetUser.UserId,
+		ReceiverId:        receiverID,
+		GroupId:           groupID,
 		Content:           req.MessageContent,
 		ScheduledSendTime: sendTime,
 		Status:            0,
-	})
+	}
 
+	taskId, err := dao.CreateScheduledMessage(task)
 	if err != nil {
 		return nil, fmt.Errorf("db error: %w", err)
 	}
 
-	// 返回成功消息给大模型
 	return &SchMessageResp{
-		Result: fmt.Sprintf("已为你设定好定时消息！\n任务ID: %d\n接收人: %s\n发送时间: %s\n内容: %s\n时间到了我会自动帮你发出去。",
-			taskId, targetUser.Username, sendTime.Format(time.RFC3339), req.MessageContent),
+		Result: fmt.Sprintf("已为你设定好定时消息！\n任务ID: %d\n接收对象: %s\n发送时间: %s\n内容: %s\n时间到了我会自动帮你发出去。",
+			taskId, targetName, sendTime.Format(time.RFC3339), req.MessageContent),
 	}, nil
 }
 

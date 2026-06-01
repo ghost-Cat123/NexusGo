@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"go-im-system/apps/pkg/config"
+	"NexusGo/apps/pkg/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"

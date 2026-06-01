@@ -2,10 +2,10 @@ package user_api
 
 import (
 	"GeeRPC/xclient"
+	"NexusGo/apps/gateway/rpcclient"
+	"NexusGo/apps/pkg/logger"
+	"NexusGo/apps/pkg/proto/pb_user"
 	"github.com/gin-gonic/gin"
-	"go-im-system/apps/gateway/rpcclient"
-	"go-im-system/apps/pkg/logger"
-	"go-im-system/apps/pkg/proto/pb_user"
 	"golang.org/x/net/context"
 	"log"
 	"net/http"

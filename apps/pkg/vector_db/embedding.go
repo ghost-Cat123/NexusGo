@@ -1,9 +1,9 @@
 package vector_db
 
 import (
+	"NexusGo/apps/pkg/config"
 	"context"
 	"github.com/cloudwego/eino-ext/components/embedding/dashscope"
-	"go-im-system/apps/pkg/config"
 	"time"
 )
 

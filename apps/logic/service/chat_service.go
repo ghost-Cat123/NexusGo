@@ -1,9 +1,9 @@
 package service
 
 import (
-	"go-im-system/apps/logic/dao"
-	"go-im-system/apps/pkg/logger"
-	"go-im-system/apps/pkg/proto/pb_msg"
+	"NexusGo/apps/logic/dao"
+	"NexusGo/apps/pkg/logger"
+	"NexusGo/apps/pkg/proto/pb_msg"
 )
 
 // LogicService RPC 服务（上行消息已迁移至 MQ 消费，此处仅保留查询/ACK 类轻量 RPC）

@@ -1,16 +1,16 @@
 package engine
 
 import (
+	"NexusGo/apps/agent/dao"
+	"NexusGo/apps/agent/memory"
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/logger"
+	vdb "NexusGo/apps/pkg/vector_db"
 	"context"
 	"fmt"
 	milvusret "github.com/cloudwego/eino-ext/components/retriever/milvus2"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
-	"go-im-system/apps/agent/dao"
-	"go-im-system/apps/agent/memory"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/logger"
-	vdb "go-im-system/apps/pkg/vector_db"
 	"strconv"
 	"strings"
 	"time"

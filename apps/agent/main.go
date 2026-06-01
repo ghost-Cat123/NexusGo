@@ -1,17 +1,18 @@
 package main
 
 import (
+	"NexusGo/apps/agent/handler"
+	"NexusGo/apps/agent/models"
+	"NexusGo/apps/agent/task"
+	"NexusGo/apps/pkg/cache"
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/db"
+	"NexusGo/apps/pkg/logger"
+	"NexusGo/apps/pkg/utils"
+	"NexusGo/apps/pkg/vector_db"
 	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
-	"go-im-system/apps/agent/handler"
-	"go-im-system/apps/agent/task"
-	"go-im-system/apps/pkg/cache"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/db"
-	"go-im-system/apps/pkg/logger"
-	"go-im-system/apps/pkg/utils"
-	"go-im-system/apps/pkg/vector_db"
 	"log"
 	"net/http"
 	"os"
@@ -32,6 +33,15 @@ func main() {
 	if dbInitErr != nil {
 		logger.Log.Fatalf("连接数据库失败: %v", dbInitErr)
 	}
+	// 自动建表（幂等，生产环境安全）
+	db.MustAutoMigrate(
+		&models.User{},
+		&models.Messages{},
+		&models.Group{},
+		&models.GroupMember{},
+		&models.AgentSummary{},
+		&models.ScheduledMessages{},
+	)
 
 	cacheInitErr := cache.InitRedis(config.GlobalConfig.Redis)
 	if cacheInitErr != nil {
@@ -51,6 +61,14 @@ func main() {
 	cronScheduler := task.StartCronJobs()
 
 	r := gin.Default()
+	// 热重载端点
+	r.POST("/agent/config/reload", func(c *gin.Context) {
+		if err := config.Reload(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "reloaded"})
+	})
 	// SSE路由
 	r.GET("/agent/chat/sse", handler.ChatSSE)
 	// 审批路由

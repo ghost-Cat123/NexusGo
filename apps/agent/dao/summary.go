@@ -1,9 +1,9 @@
 package dao
 
 import (
+	"NexusGo/apps/agent/models"
+	"NexusGo/apps/pkg/db"
 	"fmt"
-	"go-im-system/apps/agent/models"
-	"go-im-system/apps/pkg/db"
 )
 
 // SaveSummary 将 LLM 生成的摘要落库

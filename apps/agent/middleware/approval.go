@@ -1,13 +1,13 @@
 package middleware
 
 import (
+	"NexusGo/apps/agent/tools"
 	"context"
 	"encoding/gob"
 	"fmt"
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
-	"go-im-system/apps/agent/tools"
 )
 
 func init() {

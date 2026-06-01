@@ -1,8 +1,8 @@
 package db
 
 import (
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/logger"
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/logger"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"sync"

@@ -1,11 +1,11 @@
 package service
 
 import (
+	"NexusGo/apps/logic/dao"
+	"NexusGo/apps/logic/models"
+	"NexusGo/apps/pkg/proto/pb_user"
+	"NexusGo/apps/pkg/utils"
 	"errors"
-	"go-im-system/apps/logic/dao"
-	"go-im-system/apps/logic/models"
-	"go-im-system/apps/pkg/proto/pb_user"
-	"go-im-system/apps/pkg/utils"
 )
 
 func (s *LogicService) UserLogin(args *pb_user.UserLoginArgs, reply *pb_user.UserLoginReply) error {

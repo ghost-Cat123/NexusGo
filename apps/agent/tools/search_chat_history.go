@@ -1,16 +1,16 @@
 package tools
 
 import (
+	"NexusGo/apps/agent/dao"
+	"NexusGo/apps/agent/models"
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/utils"
+	vdb "NexusGo/apps/pkg/vector_db"
 	"context"
 	"fmt"
 	milvusret "github.com/cloudwego/eino-ext/components/retriever/milvus2"
 	"github.com/cloudwego/eino/components/tool"
 	toolutils "github.com/cloudwego/eino/components/tool/utils"
-	"go-im-system/apps/agent/dao"
-	"go-im-system/apps/agent/models"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/utils"
-	vdb "go-im-system/apps/pkg/vector_db"
 	"strconv"
 	"strings"
 	"time"

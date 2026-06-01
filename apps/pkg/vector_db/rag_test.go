@@ -1,12 +1,12 @@
 package vector_db
 
 import (
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/logger"
 	"context"
 	"fmt"
 	milvusret "github.com/cloudwego/eino-ext/components/retriever/milvus2"
 	"github.com/cloudwego/eino/schema"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/logger"
 	"log"
 	"testing"
 	"time"

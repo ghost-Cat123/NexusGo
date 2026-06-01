@@ -1,8 +1,8 @@
 package dao
 
 import (
-	"go-im-system/apps/logic/models"
-	"go-im-system/apps/pkg/db"
+	"NexusGo/apps/logic/models"
+	"NexusGo/apps/pkg/db"
 )
 
 func InsertMessage(message *models.Messages) error {

@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"go-im-system/apps/agent/middleware"
+	"NexusGo/apps/agent/middleware"
 	"sync"
 )
 

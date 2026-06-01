@@ -1,11 +1,11 @@
 package vector_db
 
 import (
+	"NexusGo/apps/pkg/logger"
 	"context"
 	"github.com/milvus-io/milvus/client/v2/entity"
 	"github.com/milvus-io/milvus/client/v2/index"
 	"github.com/milvus-io/milvus/client/v2/milvusclient"
-	"go-im-system/apps/pkg/logger"
 	"time"
 )
 

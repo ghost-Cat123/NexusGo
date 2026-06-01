@@ -1,7 +1,7 @@
 package models
 
 import (
-	"go-im-system/apps/pkg/utils"
+	"NexusGo/apps/pkg/utils"
 	"time"
 )
 
@@ -25,12 +25,13 @@ type Messages struct {
 }
 
 // NewMessages 创建一条待插入消息（分配全局 MsgId，SeqId 默认 0；单聊由网关覆盖 SeqId）
-func NewMessages(senderId int64, receiverId int64, content string, isRead bool) *Messages {
+func NewMessages(senderId int64, receiverId int64, groupId int64, content string, isRead bool) *Messages {
 	return &Messages{
 		MsgId:      utils.GetSnowflake().Generate(),
 		SeqId:      0,
 		SenderId:   senderId,
 		ReceiverId: receiverId,
+		GroupId:    groupId,
 		Content:    content,
 		IsRead:     isRead,
 		SendStatus: SendStatusUnsent,

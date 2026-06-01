@@ -1,11 +1,11 @@
 package middleware
 
 import (
+	"NexusGo/apps/pkg/cache"
 	"context"
 	"fmt"
 	"github.com/cloudwego/eino/adk"
 	"github.com/go-redis/redis/v8"
-	"go-im-system/apps/pkg/cache"
 	"time"
 )
 

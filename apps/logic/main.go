@@ -3,14 +3,15 @@ package main
 import (
 	"GeeRPC"
 	"GeeRPC/midware"
-	"go-im-system/apps/logic/service"
-	"go-im-system/apps/pkg/cache"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/db"
-	"go-im-system/apps/pkg/logger"
-	"go-im-system/apps/pkg/mq"
-	"go-im-system/apps/pkg/utils"
-	"go-im-system/apps/pkg/vector_db"
+	"NexusGo/apps/logic/models"
+	"NexusGo/apps/logic/service"
+	"NexusGo/apps/pkg/cache"
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/db"
+	"NexusGo/apps/pkg/logger"
+	"NexusGo/apps/pkg/mq"
+	"NexusGo/apps/pkg/utils"
+	"NexusGo/apps/pkg/vector_db"
 	"log"
 	"net"
 	"strconv"
@@ -32,6 +33,13 @@ func main() {
 	if dbInitErr != nil {
 		logger.Log.Fatalf("连接数据库失败: %v", dbInitErr)
 	}
+	// 自动建表（幂等，生产环境安全）
+	db.MustAutoMigrate(
+		&models.User{},
+		&models.Messages{},
+		&models.Group{},
+		&models.GroupMember{},
+	)
 
 	cacheInitErr := cache.InitRedis(config.GlobalConfig.Redis)
 	if cacheInitErr != nil {

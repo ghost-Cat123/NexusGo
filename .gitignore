@@ -8,5 +8,4 @@ apps/config.yaml
 /apps/pkg/vector_db/logs/*.log
 logs/*.log
 /logs/*.log.gz
-/docker-compose.yml
 /plan.md

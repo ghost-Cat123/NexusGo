@@ -3,7 +3,7 @@ syntax = "proto3";
 package pb_msg;
 
 // protoc --go_out=. --go_opt=module=go-im-system apps/pkg/proto/pb_msg/msg.proto
-option go_package = "go-im-system/apps/pkg/proto/pb_msg";
+option go_package = "NexusGo/apps/pkg/proto/pb_msg";
 
 // 发送消息请求
 message SendMessageArgs {

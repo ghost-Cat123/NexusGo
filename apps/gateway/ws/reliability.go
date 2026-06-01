@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"NexusGo/apps/pkg/cache"
+	"NexusGo/apps/pkg/utils"
 	"github.com/go-redis/redis/v8"
-	"go-im-system/apps/pkg/cache"
-	"go-im-system/apps/pkg/utils"
 )
 
 // ===================== 1. 通用接口 =====================

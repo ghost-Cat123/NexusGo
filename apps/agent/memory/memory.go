@@ -1,19 +1,19 @@
 package memory
 
 import (
+	"NexusGo/apps/agent/dao"
+	"NexusGo/apps/pkg/config"
+	vdb "NexusGo/apps/pkg/vector_db"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
-	"go-im-system/apps/agent/dao"
-	"go-im-system/apps/pkg/config"
-	vdb "go-im-system/apps/pkg/vector_db"
 	"time"
 
+	"NexusGo/apps/pkg/cache"
+	"NexusGo/apps/pkg/logger"
 	"github.com/cloudwego/eino/schema"
-	"go-im-system/apps/pkg/cache"
-	"go-im-system/apps/pkg/logger"
 )
 
 const (

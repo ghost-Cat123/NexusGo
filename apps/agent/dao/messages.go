@@ -1,8 +1,8 @@
 package dao
 
 import (
-	"go-im-system/apps/agent/models"
-	"go-im-system/apps/pkg/db"
+	"NexusGo/apps/agent/models"
+	"NexusGo/apps/pkg/db"
 	"strings"
 	"time"
 )

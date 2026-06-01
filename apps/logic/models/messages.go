@@ -1,7 +1,7 @@
 package models
 
 import (
-	"go-im-system/apps/pkg/utils"
+	"NexusGo/apps/pkg/utils"
 	"time"
 )
 

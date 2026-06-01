@@ -7,7 +7,7 @@ import (
 )
 
 // JwtSecret 签名密钥 (生产环境中绝对不能硬编码，必须从配置文件/环境变量读取！)
-var JwtSecret = []byte("go-im-system-super-secret-key-2026")
+var JwtSecret = []byte("NexusGo-super-secret-key-2026")
 
 // CustomClaims 自定义 JWT 载荷
 type CustomClaims struct {

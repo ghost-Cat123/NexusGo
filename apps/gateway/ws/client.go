@@ -1,11 +1,11 @@
 package ws
 
 import (
+	"NexusGo/apps/pkg/cache"
+	"NexusGo/apps/pkg/logger"
 	"context"
 	"encoding/json"
 	"github.com/gorilla/websocket"
-	"go-im-system/apps/pkg/cache"
-	"go-im-system/apps/pkg/logger"
 	"strconv"
 	"sync"
 	"time"

@@ -1,6 +1,11 @@
 package engine
 
 import (
+	"NexusGo/apps/agent/memory"
+	"NexusGo/apps/agent/middleware"
+	"NexusGo/apps/agent/tools"
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/logger"
 	"context"
 	"fmt"
 	"github.com/cloudwego/eino-ext/components/model/deepseek"
@@ -8,11 +13,6 @@ import (
 	"github.com/cloudwego/eino/adk/middlewares/patchtoolcalls"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
-	"go-im-system/apps/agent/memory"
-	"go-im-system/apps/agent/middleware"
-	"go-im-system/apps/agent/tools"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/logger"
 	"strings"
 	"sync"
 )
@@ -49,6 +49,18 @@ func GetAgentGraphRunner(ctx context.Context) (*adk.Runner, error) {
 	// 缓存runner
 	cacheRunner = runner
 	return cacheRunner, nil
+}
+
+// ClearCachedRunner 清除缓存，用于热重载
+func ClearCachedRunner() {
+	runnerMu.Lock()
+	cacheRunner = nil
+	runnerMu.Unlock()
+}
+
+// 加载热重载配置
+func init() {
+	config.OnReload(ClearCachedRunner)
 }
 
 func buildRunner(ctx context.Context) (*adk.Runner, error) {

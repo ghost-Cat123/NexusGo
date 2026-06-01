@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/logger"
 	milvusret "github.com/cloudwego/eino-ext/components/retriever/milvus2"
 	"github.com/cloudwego/eino/schema"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/logger"
 )
 
 func TestMemoryDocumentConverter(t *testing.T) {

@@ -1,6 +1,12 @@
 package handler
 
 import (
+	"NexusGo/apps/agent/dao"
+	"NexusGo/apps/agent/engine"
+	sseevent "NexusGo/apps/agent/event"
+	"NexusGo/apps/agent/middleware"
+	"NexusGo/apps/agent/models"
+	"NexusGo/apps/pkg/logger"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,12 +14,6 @@ import (
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
 	"github.com/gin-gonic/gin"
-	"go-im-system/apps/agent/dao"
-	"go-im-system/apps/agent/engine"
-	sseevent "go-im-system/apps/agent/event"
-	"go-im-system/apps/agent/middleware"
-	"go-im-system/apps/agent/models"
-	"go-im-system/apps/pkg/logger"
 	"io"
 	"net/http"
 	"strconv"
@@ -200,7 +200,7 @@ func ChatSSE(c *gin.Context) {
 		if err := session.Append(context.Background(), assistantMsg); err != nil {
 			logger.Log.Errorf("[SSE] session 更新失败: %v", err)
 		}
-		if err = dao.InsertMessage(models.NewMessages(-1, senderId, fullText, false)); err != nil {
+		if err = dao.InsertMessage(models.NewMessages(-1, senderId, 0, fullText, false)); err != nil {
 			logger.Log.Errorf("AI消息落库失败: %v", err)
 		}
 		logger.Log.Infof("[SSE] AI 回复已落库: user=%d", senderId)

@@ -1,9 +1,9 @@
 package callback
 
 import (
+	"NexusGo/apps/pkg/logger"
 	"context"
 	"github.com/cloudwego/eino/components"
-	"go-im-system/apps/pkg/logger"
 	"time"
 
 	"github.com/cloudwego/eino/callbacks"

@@ -2,22 +2,22 @@ package ws
 
 import (
 	"GeeRPC/xclient"
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/mq"
+	"NexusGo/apps/pkg/utils"
 	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/mq"
-	"go-im-system/apps/pkg/utils"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
-	"go-im-system/apps/gateway/rpcclient"
-	"go-im-system/apps/pkg/logger"
-	"go-im-system/apps/pkg/proto/pb_msg"
+	"NexusGo/apps/gateway/rpcclient"
+	"NexusGo/apps/pkg/logger"
+	"NexusGo/apps/pkg/proto/pb_msg"
 	"log"
 )
 

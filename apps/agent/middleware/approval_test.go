@@ -1,9 +1,9 @@
 package middleware_test
 
 import (
+	"NexusGo/apps/agent/memory"
 	"context"
 	"fmt"
-	"go-im-system/apps/agent/memory"
 	"testing"
 
 	"github.com/cloudwego/eino/adk"
@@ -13,9 +13,9 @@ import (
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
 
-	"go-im-system/apps/agent/engine"
-	"go-im-system/apps/agent/middleware"
-	"go-im-system/apps/agent/tools"
+	"NexusGo/apps/agent/engine"
+	"NexusGo/apps/agent/middleware"
+	"NexusGo/apps/agent/tools"
 )
 
 // ── mock ToolCallingChatModel ──

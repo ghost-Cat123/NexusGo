@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package pb_user;
 
-option go_package = "go-im-system/apps/pkg/proto/pb_user";
+option go_package = "NexusGo/apps/pkg/proto/pb_user";
 
 // 登录请求
 message UserLoginArgs {

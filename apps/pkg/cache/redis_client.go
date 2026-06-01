@@ -1,9 +1,9 @@
 package cache
 
 import (
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/logger"
 	"context"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/logger"
 	"sync"
 
 	"github.com/go-redis/redis/v8"

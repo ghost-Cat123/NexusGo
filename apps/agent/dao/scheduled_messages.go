@@ -1,9 +1,9 @@
 package dao
 
 import (
-	"go-im-system/apps/agent/models"
-	"go-im-system/apps/pkg/db"
-	"go-im-system/apps/pkg/logger"
+	"NexusGo/apps/agent/models"
+	"NexusGo/apps/pkg/db"
+	"NexusGo/apps/pkg/logger"
 	"gorm.io/gorm"
 	"time"
 )
@@ -60,8 +60,16 @@ func FailedTask(schMsgId int64, failReason string) {
 			"fail_reason":  failReason,
 			"updated_time": time.Now(),
 		}).Error
-	// 改状态出错 打印日志
 	if err != nil {
 		logger.Log.Fatalf("[FATAL] 任务 ID: %d 状态回写失败！原错误: %s, 数据库写入错误: %v", schMsgId, failReason, err)
 	}
+}
+
+func MarkSchTaskDone(schMsgId int64) error {
+	return db.GetDB().Model(&models.ScheduledMessages{}).
+		Where("sch_msg_id = ? AND status = ?", schMsgId, 1).
+		Updates(map[string]interface{}{
+			"status":       2,
+			"updated_time": time.Now(),
+		}).Error
 }

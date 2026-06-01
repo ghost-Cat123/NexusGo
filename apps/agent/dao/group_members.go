@@ -1,6 +1,6 @@
 package dao
 
-import "go-im-system/apps/pkg/db"
+import "NexusGo/apps/pkg/db"
 
 // GetGroupMembers 获取群内所有成员id 包含发送者
 func GetGroupMembers(groupID int64) ([]int64, error) {

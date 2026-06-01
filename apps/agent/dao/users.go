@@ -1,9 +1,9 @@
 package dao
 
 import (
+	"NexusGo/apps/agent/models"
+	"NexusGo/apps/pkg/db"
 	"errors"
-	"go-im-system/apps/agent/models"
-	"go-im-system/apps/pkg/db"
 )
 
 func FindUserByName(userName string) (models.User, error) {

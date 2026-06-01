@@ -1,16 +1,16 @@
 package service
 
 import (
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/logger"
+	"NexusGo/apps/pkg/mq"
+	vdb "NexusGo/apps/pkg/vector_db"
 	"context"
 	"encoding/json"
 	"fmt"
 	milvusidx "github.com/cloudwego/eino-ext/components/indexer/milvus2"
 	"github.com/cloudwego/eino/schema"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/logger"
-	"go-im-system/apps/pkg/mq"
-	vdb "go-im-system/apps/pkg/vector_db"
 	"time"
 )
 

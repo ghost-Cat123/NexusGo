@@ -1,9 +1,9 @@
 package router
 
 import (
+	"NexusGo/apps/gateway/api/user_api"
+	"NexusGo/apps/gateway/ws"
 	"github.com/gin-gonic/gin"
-	"go-im-system/apps/gateway/api/user_api"
-	"go-im-system/apps/gateway/ws"
 	"net/http"
 )
 

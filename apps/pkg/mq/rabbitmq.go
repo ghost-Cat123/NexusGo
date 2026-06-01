@@ -1,9 +1,9 @@
 package mq
 
 import (
+	"NexusGo/apps/pkg/logger"
 	"context"
 	"fmt"
-	"go-im-system/apps/pkg/logger"
 	"sync/atomic"
 
 	amqp "github.com/rabbitmq/amqp091-go"

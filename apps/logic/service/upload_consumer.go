@@ -1,16 +1,16 @@
 package service
 
 import (
+	"NexusGo/apps/logic/dao"
+	"NexusGo/apps/logic/models"
+	"NexusGo/apps/pkg/cache"
+	"NexusGo/apps/pkg/logger"
+	"NexusGo/apps/pkg/mq"
+	"NexusGo/apps/pkg/utils"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go-im-system/apps/logic/dao"
-	"go-im-system/apps/logic/models"
-	"go-im-system/apps/pkg/cache"
-	"go-im-system/apps/pkg/logger"
-	"go-im-system/apps/pkg/mq"
-	"go-im-system/apps/pkg/utils"
 	"strconv"
 	"strings"
 	"time"

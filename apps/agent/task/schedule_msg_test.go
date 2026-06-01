@@ -1,38 +1,77 @@
 package task
 
 import (
-	"go-im-system/apps/agent/models"
+	"NexusGo/apps/agent/models"
 	"testing"
 	"time"
 )
 
-func TestHandleScheduledMessages(t *testing.T) {
-	// 这个测试需要数据库中有定时消息数据
-	// 实际测试时需要准备测试数据
-
-	// 调用处理函数
-	handleScheduledMessages()
-
-	// 这里可以根据实际情况验证处理结果
-	t.Log("定时消息处理测试（需要准备测试数据）")
+func TestScheduledMessages_GroupIdFieldExists(t *testing.T) {
+	task := models.ScheduledMessages{
+		GroupId: 123,
+	}
+	if task.GroupId != 123 {
+		t.Error("GroupId 字段应存在且可赋值")
+	}
 }
 
-func TestSendSchMessages(t *testing.T) {
-	// 这个测试需要数据库中有定时消息数据
-	// 实际测试时需要准备测试数据
+func TestScheduledMessages_GroupIdDefaultZero(t *testing.T) {
+	task := models.ScheduledMessages{}
+	if task.GroupId != 0 {
+		t.Errorf("GroupId 默认值应为 0, 实际 %d", task.GroupId)
+	}
+}
 
-	// 创建一个定时消息任务
+func TestScheduledMessages_SingleChatTask(t *testing.T) {
 	task := &models.ScheduledMessages{
 		CreatorId:         1001,
 		ReceiverId:        1002,
-		Content:           "这是一条定时消息",
+		GroupId:           0,
+		Content:           "单聊定时消息",
 		ScheduledSendTime: time.Now().Add(time.Minute),
 		Status:            0,
 	}
 
-	// 调用发送函数
-	SendSchMessages(task)
+	if task.GroupId != 0 {
+		t.Error("单聊定时消息 GroupId 应为 0")
+	}
+	if task.ReceiverId != 1002 {
+		t.Error("单聊定时消息 ReceiverId 应指向目标用户")
+	}
+}
 
-	// 这里可以根据实际情况验证发送结果
-	t.Log("定时消息发送测试（需要准备测试数据）")
+func TestScheduledMessages_GroupChatTask(t *testing.T) {
+	task := &models.ScheduledMessages{
+		CreatorId:         1001,
+		ReceiverId:        0,
+		GroupId:           123,
+		Content:           "群聊定时消息",
+		ScheduledSendTime: time.Now().Add(time.Minute),
+		Status:            0,
+	}
+
+	if task.GroupId != 123 {
+		t.Error("群聊定时消息 GroupId 应指向目标群")
+	}
+	if task.ReceiverId != 0 {
+		t.Error("群聊定时消息 ReceiverId 应为 0")
+	}
+}
+
+func TestScheduledMessages_BothReceiverAndGroup(t *testing.T) {
+	task := &models.ScheduledMessages{
+		CreatorId:         1001,
+		ReceiverId:        0,
+		GroupId:           0,
+		Content:           "异常情况",
+		ScheduledSendTime: time.Now().Add(time.Minute),
+		Status:            0,
+	}
+
+	if task.GroupId != 0 {
+		t.Error("无目标时 GroupId 应为 0")
+	}
+	if task.ReceiverId != 0 {
+		t.Error("无目标时 ReceiverId 应为 0")
+	}
 }

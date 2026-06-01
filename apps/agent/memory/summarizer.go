@@ -6,10 +6,10 @@ import (
 	"strings"
 	"sync"
 
+	"NexusGo/apps/pkg/config"
+	"NexusGo/apps/pkg/logger"
 	"github.com/cloudwego/eino-ext/components/model/deepseek"
 	"github.com/cloudwego/eino/schema"
-	"go-im-system/apps/pkg/config"
-	"go-im-system/apps/pkg/logger"
 )
 
 var (
@@ -51,6 +51,16 @@ func getSummaryChatModel(ctx context.Context) (*deepseek.ChatModel, error) {
 	}
 	cacheSummaryCM = cm
 	return cacheSummaryCM, nil
+}
+
+func ClearCachedSummaryCM() {
+	summaryCMMu.Lock()
+	cacheSummaryCM = nil
+	summaryCMMu.Unlock()
+}
+
+func init() {
+	config.OnReload(ClearCachedSummaryCM)
 }
 
 // SummarizeWithLLM 将一组历史消息压缩为摘要字符串。

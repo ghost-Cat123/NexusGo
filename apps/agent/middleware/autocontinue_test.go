@@ -7,7 +7,7 @@ import (
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
 
-	"go-im-system/apps/agent/middleware"
+	"NexusGo/apps/agent/middleware"
 )
 
 func makeState(msgs ...adk.Message) *adk.ChatModelAgentState {
