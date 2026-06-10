@@ -18,7 +18,7 @@ type RateLimitMiddleware struct {
 func (m *RateLimitMiddleware) BeforeAgent(
 	ctx context.Context, runCtx *adk.ChatModelAgentContext,
 ) (context.Context, *adk.ChatModelAgentContext, error) {
-	// 取出当前userID
+	// 取出当前userID 作为value
 	userID, _ := ctx.Value("current_user_id").(int64)
 	// 是否限流
 	err := checkRateLimit(ctx, userID)
@@ -30,11 +30,11 @@ func (m *RateLimitMiddleware) BeforeAgent(
 
 // 定义Lua脚本（限流）
 /*
-	1. 删除过期数据
-	2. 统计当前请求数
-	3. 请求是否超限
-	4. 写入请求
-	5. 设置过期时间
+	1. 步骤1：删除【滑动窗口外】的所有过期请求
+	2. 步骤2：统计当前窗口内的请求总数
+	3. 步骤3：判断是否超限 → 超限直接返回0（拒绝请求）
+	4. 步骤4：未超限 → 添加当前请求到ZSet
+	5. 步骤5：刷新Key过期时间（防止闲置数据占用内存）
 */
 var rateLimitLua = redis.NewScript(`
 	redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[2])
@@ -49,10 +49,15 @@ var rateLimitLua = redis.NewScript(`
 
 // 原子性限流操作
 func checkRateLimit(ctx context.Context, userID int64) error {
+	// 1. 生成Redis Key：按用户ID隔离，实现【用户级限流】
 	redisKey := fmt.Sprintf("rate_limit:ai:%d", userID)
+	// 2. 当前时间（纳秒级，保证唯一）
 	now := time.Now().UnixNano()
+	// 3. 滑动窗口左边界：当前时间 - 1分钟（只保留最近1分钟的请求）
 	oneMinuitAgo := now - time.Minute.Nanoseconds()
+	// 4. 限流阈值：1分钟最多5次请求
 	limit := int64(5)
+	// 5. Key过期时间：60秒（无请求时自动删除，节约内存）
 	expire := int64(60)
 
 	// 返回值0限流 1放行

@@ -61,9 +61,15 @@ func handleMQDelivery(d amqp.Delivery) {
 	}
 
 	// 按前端协议组装 chat_push JSON
-	pushMsg, err := marshalChatPush(payload.MsgID, payload.SeqID, payload.GroupID, payload.SenderID, payload.Content)
-	if err != nil {
-		logger.Log.Errorf("[MQ] 组装推送 JSON 失败: %v", err)
+	var pushMsg []byte
+	var marshErr error
+	if payload.ChatType == mq.ChatTypeFriendRequest {
+		pushMsg, marshErr = marshalFriendRequestPush(payload.SenderID, payload.Content)
+	} else {
+		pushMsg, marshErr = marshalChatPush(payload.MsgID, payload.SeqID, payload.GroupID, payload.SenderID, payload.Content)
+	}
+	if marshErr != nil {
+		logger.Log.Errorf("[MQ] 组装推送 JSON 失败: %v", marshErr)
 		_ = d.Nack(false, false)
 		return
 	}

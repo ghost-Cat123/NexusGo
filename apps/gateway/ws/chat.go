@@ -1,7 +1,7 @@
 package ws
 
 import (
-	"GeeRPC/xclient"
+	"GrowRPC/xclient"
 	"NexusGo/apps/pkg/config"
 	"NexusGo/apps/pkg/mq"
 	"NexusGo/apps/pkg/utils"
@@ -37,9 +37,8 @@ var agentHTTPClient = &http.Client{
 // NotifyDeliveredRPC 通知 Logic：对端 WS 已写入，send_status 0→1
 func NotifyDeliveredRPC(ctx context.Context, senderID, msgID int64) {
 	args := &pb_msg.NotifyDeliveredArgs{MsgId: msgID}
-	reply := &pb_msg.NotifyDeliveredReply{}
 	rk := xclient.WithRoutingKey(ctx, strconv.FormatInt(senderID, 10))
-	if err := rpcclient.LogicRpcClient.Call(rk, "LogicService.NotifyDelivered", args, reply); err != nil {
+	if _, err := rpcclient.MsgServiceClient.NotifyDelivered(rk, args); err != nil {
 		logger.Log.Errorf("NotifyDelivered RPC 失败: %v", err)
 	}
 }
@@ -52,6 +51,14 @@ func marshalChatPush(msgID, seqID, groupID, from int64, content string) ([]byte,
 		"from":      from,
 		"group_id":  groupID,
 		"content":   content,
+	})
+}
+
+func marshalFriendRequestPush(from int64, content string) ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"chat_type": "friend_request",
+		"from":      from,
+		"apply_msg": content,
 	})
 }
 
@@ -240,11 +247,10 @@ func handleAck(userId int64, msgData []byte) {
 	ackMessageArgs := &pb_msg.AckMessageArgs{
 		MsgId: ackReq.MsgId,
 	}
-	ackMessageReply := &pb_msg.AckMessageReply{}
 
 	routingKey := strconv.FormatInt(userId, 10)
 	ctx := xclient.WithRoutingKey(context.Background(), routingKey)
-	err := rpcclient.LogicRpcClient.Call(ctx, "LogicService.AckMessage", ackMessageArgs, ackMessageReply)
+	_, err := rpcclient.MsgServiceClient.AckMessage(ctx, ackMessageArgs)
 	if err != nil {
 		log.Printf("更新已读状态失败: %v", err)
 		return

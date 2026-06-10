@@ -41,8 +41,8 @@ func (m *TrimResultMiddleWare) BeforeModelRewriteState(
 		// 找到带有影响工具前缀的工具
 		for _, prefix := range noisyPrefixes {
 			if strings.HasPrefix(msg.ToolName, prefix) {
-				// 结果省略
-				msg.Content = fmt.Sprintf("[result omitted] (~%d chars)", len(msg.Content))
+				// 结果省略 Messages是切片，这边msg只拿到了消息的拷贝，真正需要改的是消息的内容
+				state.Messages[i].Content = fmt.Sprintf("[result omitted] (~%d chars)", len(msg.Content))
 				break
 			}
 		}

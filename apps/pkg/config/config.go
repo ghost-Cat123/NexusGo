@@ -16,12 +16,13 @@ type ServerConfig struct {
 	LogicPort   int `mapstructure:"logic_port"`
 	AgentPort   int `mapstructure:"agent_port"`
 	// Snowflake 节点号 0–1023，网关与 Logic 必须使用不同值以避免 msg_id 冲突
-	GatewaySnowflakeNode int    `mapstructure:"gateway_snowflake_node"`
-	LogicSnowflakeNode   int    `mapstructure:"logic_snowflake_node"`
-	AgentSnowflakeNode   int    `mapstructure:"agent_snowflake_node"`
-	AgentAddr            string `mapstructure:"agent_addr"`   // Gateway 调用 Agent 的地址
-	GatewayAddr          string `mapstructure:"gateway_addr"` // Gateway 对外地址（Docker 用 gateway:8080）
-	LogicAddr            string `mapstructure:"logic_addr"`   // Logic RPC 地址（Docker 用 logic:8001）
+	GatewaySnowflakeNode int      `mapstructure:"gateway_snowflake_node"`
+	LogicSnowflakeNode   int      `mapstructure:"logic_snowflake_node"`
+	AgentSnowflakeNode   int      `mapstructure:"agent_snowflake_node"`
+	AgentAddr            string   `mapstructure:"agent_addr"`     // Gateway 调用 Agent 的地址
+	GatewayAddr          string   `mapstructure:"gateway_addr"`   // Gateway 对外地址（Docker 用 gateway:8080）
+	LogicAddr            string   `mapstructure:"logic_addr"`     // Logic RPC 地址（Docker 用 logic:8001）
+	EtcdEndpoints        []string `mapstructure:"etcd_endpoints"` // etcd 集群地址列表
 }
 
 type MySQLConfig struct {
@@ -52,6 +53,8 @@ type MilvusConfig struct {
 type AgentConfig struct {
 	Default   string                    `mapstructure:"default"`   // 默认Agent名称（切换用）
 	Providers map[string]ProviderConfig `mapstructure:"providers"` // 多Agent配置（key=名称，value=配置）
+	Trace     TraceConfig               `mapstructure:"trace"`     // TraceLogger配置
+	MCP       MCPConfig                 `mapstructure:"mcp"`
 }
 
 // ProviderConfig 二级结构体：单个Agent的具体配置（DeepSeek/OpenAI等）
@@ -59,6 +62,16 @@ type ProviderConfig struct {
 	APIKey    string `mapstructure:"api_key"`
 	BaseURL   string `mapstructure:"base_url"`
 	ModelName string `mapstructure:"model_name"`
+}
+
+type TraceConfig struct {
+	WorkSpaceId string `mapstructure:"work_space_id"`
+	APIToken    string `mapstructure:"api_token"`
+}
+
+type MCPConfig struct {
+	ExternalURL string `mapstructure:"external_url"`
+	ServerPort  int    `mapstructure:"server_port"`
 }
 
 type LogConfig struct {

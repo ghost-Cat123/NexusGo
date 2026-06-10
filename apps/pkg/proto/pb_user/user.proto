@@ -31,3 +31,47 @@ message UserRegisterReply {
   bool success = 1;
 }
 
+message GetUserInfoArgs {
+  int64 user_id = 1;
+}
+
+message GetUserInfoReply {
+  int64 user_id = 1;
+  string username = 2;
+  string nickname = 3;
+  string avatar = 4;
+}
+
+message SearchUserArgs {
+  string keyword = 1;
+}
+
+message SearchUserItem {
+  int64 user_id = 1;
+  string username = 2;
+  string nickname = 3;
+  string avatar = 4;
+}
+
+message SearchUserReply {
+  repeated SearchUserItem users = 1;
+}
+
+message UpdateUserInfoArgs {
+  int64 user_id = 1;
+  string nickname = 2;
+  string avatar = 3;
+  string password = 4;
+}
+
+message UpdateUserInfoReply {
+  bool success = 1;
+}
+
+service UserService {
+  rpc UserLogin(UserLoginArgs) returns (UserLoginReply);
+  rpc UserRegister(UserRegisterArgs) returns (UserRegisterReply);
+  rpc GetUserInfo(GetUserInfoArgs) returns (GetUserInfoReply);
+  rpc SearchUser(SearchUserArgs) returns (SearchUserReply);
+  rpc UpdateUserInfo(UpdateUserInfoArgs) returns (UpdateUserInfoReply);
+}

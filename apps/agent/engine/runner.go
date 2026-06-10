@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"NexusGo/apps/agent/mcp"
 	"NexusGo/apps/agent/memory"
 	"NexusGo/apps/agent/middleware"
 	"NexusGo/apps/agent/tools"
@@ -100,6 +101,21 @@ func buildChatModel(ctx context.Context) (*deepseek.ChatModel, error) {
 }
 
 func buildAgent(ctx context.Context, cm *deepseek.ChatModel) (*adk.ChatModelAgent, error) {
+	// 本地工具列表
+	toolList := []tool.BaseTool{
+		tools.MustSearchHistoryTool(),
+		tools.MustSchMessageTool(),
+	}
+
+	// MCP工具
+	mcpURL := config.GlobalConfig.Agent.MCP.ExternalURL
+	if mcpTools, err := mcp.GetExternalTools(ctx, mcpURL); err != nil {
+		logger.Log.Warnf("MCP 远端工具加载失败: %v", err)
+	} else if len(mcpTools) > 0 {
+		toolList = append(toolList, mcpTools...)
+		logger.Log.Infof("MCP 远端工具加载成功，数量: %d", len(mcpTools))
+	}
+
 	// 声明内置中间件
 	patchToolMiddleware, err := patchtoolcalls.New(ctx, nil)
 	if err != nil {
@@ -124,10 +140,7 @@ func buildAgent(ctx context.Context, cm *deepseek.ChatModel) (*adk.ChatModelAgen
 		},
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
-				Tools: []tool.BaseTool{
-					tools.MustSearchHistoryTool(),
-					tools.MustSchMessageTool(),
-				},
+				Tools: toolList,
 				ToolCallMiddlewares: []compose.ToolMiddleware{
 					middleware.ToolFixMiddleware(),
 				},

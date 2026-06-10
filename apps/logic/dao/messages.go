@@ -55,3 +55,31 @@ func MarkSendTransportDelivered(msgId int64) error {
 		Update("send_status", models.SendStatusSentUnconfirmed)
 	return result.Error
 }
+
+const maxChatLimit = 200
+
+func GetChatHistory(userID, targetID, cursor, limit int64) ([]models.Messages, error) {
+	if limit <= 0 || limit > maxChatLimit {
+		limit = 20
+	}
+	var messages []models.Messages
+	query := db.GetDB().Where("((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?))", userID, targetID, targetID, userID)
+	if cursor > 0 {
+		query = query.Where("msg_id < ?", cursor)
+	}
+	err := query.Order("msg_id DESC").Limit(int(limit)).Find(&messages).Error
+	return messages, err
+}
+
+func GetGroupHistory(groupID, cursor, limit int64) ([]models.Messages, error) {
+	if limit <= 0 || limit > maxChatLimit {
+		limit = 20
+	}
+	var messages []models.Messages
+	query := db.GetDB().Where("group_id = ?", groupID)
+	if cursor > 0 {
+		query = query.Where("msg_id < ?", cursor)
+	}
+	err := query.Order("msg_id DESC").Limit(int(limit)).Find(&messages).Error
+	return messages, err
+}

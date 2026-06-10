@@ -1,7 +1,7 @@
 package ws
 
 import (
-	"GeeRPC/xclient"
+	"GrowRPC/xclient"
 	"NexusGo/apps/gateway/rpcclient"
 	"NexusGo/apps/pkg/cache"
 	"NexusGo/apps/pkg/config"
@@ -92,10 +92,9 @@ func Handler(c *gin.Context) {
 
 func syncMessage(userID int64, client *Client) error {
 	syncArgs := &pb_msg.SyncUnreadArgs{ReceiverId: userID}
-	syncReply := &pb_msg.SyncUnreadReply{}
 	routingKey := strconv.FormatInt(userID, 10)
 	ctx := xclient.WithRoutingKey(context.Background(), routingKey)
-	err := rpcclient.LogicRpcClient.Call(ctx, "LogicService.SyncUnread", syncArgs, syncReply)
+	syncReply, err := rpcclient.MsgServiceClient.SyncUnread(ctx, syncArgs)
 	if err == nil && len(syncReply.Messages) > 0 {
 		// 如果有未读消息，通过 conn 循环 WriteMessage 发给该用户！
 		for _, msg := range syncReply.Messages {
@@ -116,8 +115,7 @@ func syncMessage(userID int64, client *Client) error {
 		}
 		// 发送完后，最好再调一个 RPC 告诉 Logic 服：这些消息已读了 (Update is_read = 1)
 		readArgs := &pb_msg.ReadMessagesArgs{ReceiverId: userID}
-		readReply := &pb_msg.ReadMessagesReply{}
-		err = rpcclient.LogicRpcClient.Call(ctx, "LogicService.ReadMessages", readArgs, readReply)
+		readReply, err := rpcclient.MsgServiceClient.ReadMessages(ctx, readArgs)
 		if err != nil || !readReply.Success {
 			logger.Log.Errorf("消息 [%d] 连接关闭失败", userID)
 		} else {

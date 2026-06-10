@@ -2,5 +2,5 @@ go 1.26.3
 
 use (
 	.
-	./apps/pkg/geeRPC
+	./apps/pkg/GrowRPC
 )

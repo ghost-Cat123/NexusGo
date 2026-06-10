@@ -22,3 +22,15 @@ func CreateGroup(group *models.Group, memberIDs []int64) error {
 		return tx.Create(&members).Error
 	})
 }
+
+func GetGroupByID(groupID int64) (models.Group, error) {
+	var group models.Group
+	err := db.GetDB().Where("group_id = ?", groupID).First(&group).Error
+	return group, err
+}
+
+func GetGroupsByIDs(groupIDs []int64) ([]models.Group, error) {
+	var groups []models.Group
+	err := db.GetDB().Where("group_id IN ?", groupIDs).Find(&groups).Error
+	return groups, err
+}

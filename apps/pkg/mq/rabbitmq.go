@@ -23,9 +23,10 @@ const vectorExchangeName = "im.vector.index"
 
 // 消息类型
 const (
-	ChatTypeSingle = "single_chat"
-	ChatTypeGroup  = "group_chat"
-	ChatTypeAI     = "ai_chat"
+	ChatTypeSingle        = "single_chat"
+	ChatTypeGroup         = "group_chat"
+	ChatTypeAI            = "ai_chat"
+	ChatTypeFriendRequest = "friend_request"
 )
 
 // DownPayload 下行消息体，Logic 生产、Gateway 消费。

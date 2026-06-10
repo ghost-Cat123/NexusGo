@@ -1,7 +1,9 @@
 package main
 
 import (
+	"NexusGo/apps/agent/callback"
 	"NexusGo/apps/agent/handler"
+	"NexusGo/apps/agent/mcp"
 	"NexusGo/apps/agent/models"
 	"NexusGo/apps/agent/task"
 	"NexusGo/apps/pkg/cache"
@@ -12,6 +14,7 @@ import (
 	"NexusGo/apps/pkg/vector_db"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -60,6 +63,11 @@ func main() {
 
 	cronScheduler := task.StartCronJobs()
 
+	traceInitErr := callback.InitCozeLoop(config.GlobalConfig.Agent)
+	if traceInitErr != nil {
+		logger.Log.Fatalf("连接CoozLoop客户端失败: %v", traceInitErr)
+	}
+
 	r := gin.Default()
 	// 热重载端点
 	r.POST("/agent/config/reload", func(c *gin.Context) {
@@ -90,6 +98,16 @@ func main() {
 			logger.Log.Fatalf("HTTP 服务异常退出: %v", err)
 		}
 	}()
+
+	// 启动MCP Server 端口8051
+	go func() {
+		logger.Log.Infof("MCP Server 启动，端口 :%d", config.GlobalConfig.Agent.MCP.ServerPort)
+		if err := mcp.Start(ctx,
+			fmt.Sprintf(":%d", config.GlobalConfig.Agent.MCP.ServerPort)); err != nil {
+			logger.Log.Fatalf("MCP Server 异常: %v", err)
+		}
+	}()
+
 	// 阻塞直到收到http关闭信号
 	<-ctx.Done()
 	logger.Log.Infof("收到退出信号，开始关闭")
@@ -101,6 +119,7 @@ func main() {
 	}
 
 	// 按序停止服务，逆序
+	callback.CloseTrace()
 	cronScheduler.Stop()
 	vector_db.CloseMilvus()
 	cache.CloseRedis()

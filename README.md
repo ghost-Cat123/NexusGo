@@ -4,56 +4,104 @@
 
 ## 项目特性
 
-- **实时通讯**：基于 WebSocket 的实时消息传输，支持单聊
+- **实时通讯**：基于 WebSocket 的实时消息传输，支持单聊与群聊
 - **离线消息**：用户离线时消息落库，上线后自动同步
 - **AI 流式输出**：AI Agent 独立微服务，原生 SSE 流式推送，不丢帧
-- **削峰填谷**：全链路 RabbitMQ 异步解耦，网关不查 DB 不调 RPC，M 级并发无压力
+- **削峰填谷**：全链路 RabbitMQ 异步解耦，网关不查 DB 不调 RPC，千级并发无压力
 - **消息可靠性**：消息持久化 + 手动 ACK + 死信队列，保证每条消息可追溯
 - **分布式架构**：Gateway / Logic / Agent 三服务，自建 geeRPC + 服务发现 + 一致性哈希
+- **向量记忆**：Milvus 向量数据库接入，RabbitMQ 异步双写，支持语义相似度历史检索
+- **容器化部署**：完整 Docker Compose 一键启动，含 MySQL/Redis/RabbitMQ/Milvus/MinIO/etcd
 
 ## TODO List
+
+### ✅ 已完成
 
 - [x] **全面接入 MQ 保证消息可靠性**：上行下行独立 Exchange，削峰填谷，DLX 死信兜底
 - [x] **拆分 Agent 微服务**：Agent 独立部署，流式输出从 Redis PubSub 替换为原生 SSE
 - [x] **SSE 流式推送**：Gateway 直连 Agent SSE 端点，TCP 长连接替代 fire-and-forget
 - [x] **写扩散群聊消息**：群聊写扩散，共用上行 MQ 削峰
-- [ ] **接入向量数据库完善记忆体系**：Milvus向量数据库，实现短期+中期+长期三层记忆体系
-- [ ] **Agent工程化**：
-  - [ ] **P0**：优雅关闭、runner缓存、修复SSE goroutine泄漏
-  - [ ] **P1**：工具安全分类、HITL确认机制、摘要原子性、摘要ChatModel复用
-  - [ ] **P2**：自动续写中间件、工具结果裁剪中间件、事件类型常量话
-  - [ ] **P3**：前端推送工具调用过程、长期记忆RAG注入、配置热重载
-- [ ] **基于群聊扩充 AI 功能**：群聊 tools + 意图流转 + Eino Graph 编排
+- [x] **接入向量数据库**：Milvus + MinIO + etcd，RabbitMQ 异步双写，消息向量化索引
+- [x] **语义历史搜索**：Eino RAG 工具，向量检索 → 回表取真实消息 → LLM 总结
+- [x] **三层 AI 记忆体系**：短期（Redis 滑动窗口）+ 中期（LLM 摘要 → MySQL 落库）+ 长期（摘要 Embedding → Milvus 向量索引）
+- [x] **Agent 完整工程化**：工具安全分类（只读/写入）、HITL 审批中断、配置热重载、Runner 缓存、SSE JSON 传递、续写/裁剪/兜底全套中间件、Token/TTFT 追踪回调
+- [x] **MySQL 批量写入**：`batchInsertWorker` 双重触发（满 50 条 / 30ms 定时），Redis `MGet` 批量查路由，失败幂等降级单条
+- [x] **Docker 容器化部署**：完整 `docker-compose.yml`，三微服务 + 六基础设施一键启动
+
+### 🚧 进行中 / 待实现
+
+#### Agent 能力完善
+- [x] **工具安全分类**：`readOnly` / `destructive` 两级标注（`metadata.go`），中间件按标签自动拦截
+- [x] **HITL 审批中断**：`ApprovalMiddleware` 对写入型工具触发 `StatefulInterrupt`，前端 Approve/Reject 后恢复执行
+- [x] **自动续写中间件**：`AutoContinueMiddleware` 检测截断标志自动补全，防止长响应被切断
+- [x] **工具结果裁剪中间件**：`TrimResultMiddleWare` 裁剪过长工具返回，防止 Context 溢出
+- [x] **配置热重载**：Viper `OnReload` 回调清除 Runner 缓存，下次请求自动重建 ChatModel + Agent
+- [ ] **P1**：摘要 ChatModel 与主模型解耦（独立小模型专跑摘要，降低成本）
+- [ ] **P3**：前端实时推送工具调用过程（显示"正在搜索聊天记录…"）
+
+#### 群聊 AI Tools（参见 plan.md）
+- [ ] **T1 `search_chat_history` 重构**：加 `group_name`/`group_id` 参数，MySQL FULLTEXT + ngram 索引
+- [ ] **T2 `schedule_message` 群发改造**：加 `group_id` 字段，到点写扩散到所有群成员
+- [ ] **T3 `summarize_group`（P0）**：群消息智能摘要，提取核心议题/决议/争议点，Markdown 输出
+- [ ] **T4 `create_poll`（P1）**：AI 自动提取投票选项，创建结构化投票卡片，推送到群
+- [ ] **T5 `action_item_extractor`（P1）**：识别承诺性话语，输出结构化待办清单（assignee + deadline）
+- [ ] **T6 `group_remind`（P2）**：复用 schedule_message 群发分支，批量 @ 群成员定时提醒
+
+#### Eino Graph 编排（参见 plan.md）
+- [ ] **G1 意图路由（Intent Router）**：闲聊走轻量路径不加载 Tools，工具类走 ReAct，预期降低闲聊延迟 60%+
+- [ ] **G2 多步串联（Chain）**：复杂任务自动拆解，`search → summarise → extract → remind` 串联执行
+- [ ] **G3 条件分支（Conditional）**：根据上步工具返回结果动态选择下一步，支持"找不到则追问"等逻辑
+- [ ] **G4 ReAct 深层检索**：Embedding → Milvus 向量检索 → 回表取真实文本 → LLM 汇总，最大 3 轮迭代
+
+#### 基础功能 CRUD
+- [ ] **好友系统**：好友申请/同意/拒绝、好友列表、删除好友
+- [ ] **消息列表**：会话列表、历史消息分页、消息已读状态展示
+- [ ] **群聊管理**：创建群、邀请成员、踢人、修改群信息、转让群主
+
+#### 性能 & 可观测性
+- [x] **MySQL 批量写入**：`batchInsertWorker` 满 50 条或 30ms 触发批量 INSERT，`Redis MGet` 批量查路由，失败幂等降级单条
+- [ ] **Nginx 反向代理**：Gateway 前置 Nginx，`ip_hash` 保证 WS 长连接粘性
+- [ ] **Logic 水平扩展压测**：多实例竞争消费，验证线性扩展能力
+- [ ] **Prometheus + Grafana**：MQ 积压监控、RPC 延迟、消息吞吐大盘
+
 
 ## 技术栈
 
 | 分类 | 技术 | 版本 | 用途 |
 |------|------|------|------|
-| 语言 | Go | 1.25.8 | 核心开发 |
+| 语言 | Go | 1.26.3 | 核心开发 |
 | Web 框架 | Gin | v1.12.0 | HTTP / SSE 端点 |
 | WebSocket | gorilla/websocket | v1.5.3 | 实时消息传输 |
 | 消息队列 | RabbitMQ (amqp091-go) | v1.11.0 | 上行下行削峰、死信队列 |
 | 数据库 | MySQL + GORM | v1.31.1 | 消息 / 用户持久化 |
 | 缓存 | Redis | v8.11.0 | 在线路由表、AI 会话记忆 |
+| 向量数据库 | Milvus | v2.6.14 | 消息语义检索 |
+| 对象存储 | MinIO | 2023-03-13 | Milvus 后端存储 |
+| 服务发现 | etcd | v3.5.5 | Milvus 元数据存储 |
 | AI 框架 | Eino (cloudwego) | v0.8.5 | AI Agent 编排、工具调用、流式推理 |
 | AI 模型 | DeepSeek (eino-ext) | v0.1.2 | ChatModel |
-| 认证 | JWT | v5.2.1 | 用户鉴权 |
+| 认证 | JWT | v5.3.0 | 用户鉴权 |
 | 序列化 | Protocol Buffers | v1.36.11 | RPC 传输 |
 | 配置 | Viper | v1.21.0 | YAML 配置管理 |
 | 日志 | Zap + Lumberjack | v1.27.1 | 结构化日志 + 滚动归档 |
 | 定时任务 | cron | v3.0.1 | 预约消息调度 |
-| 自建 RPC | geeRPC | — | 服务间通信 + 负载均衡 |
+| 自建 RPC | geeRPC | — | 服务间通信 + 一致性哈希负载均衡 |
+| 容器化 | Docker Compose | — | 一键启动全栈环境 |
 
 ## 系统架构
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        客户端 (WebSocket)                    │
-└──────┬────────────────────────────────────────────────┬─────┘
+                    ┌─────────────────┐
+                    │  Nginx (可选)    │  ← WS 粘性 ip_hash，Gateway 水平扩展入口
+                    └────────┬────────┘
+                             │
+┌────────────────────────────▼─────────────────────────────────────┐
+│                        客户端 (WebSocket)                         │
+└──────┬────────────────────────────────────────────────┬──────────┘
        │                                                │
        ▼                                                ▼
 ┌──────────────┐  MQ Upload   ┌──────────────┐  SSE    ┌──────────────┐
-│   Gateway    │ ───────────▶ │    Logic     │ ◀───── │    Agent     │
+│   Gateway    │ ───────────▶ │    Logic     │ ◀────── │    Agent     │
 │   :8080      │              │    :8001     │  HTTP   │    :8050     │
 │              │ ◀─────────── │              │         │              │
 │  Gin + WS    │  MQ Down     │  GeeRPC      │         │  Gin + SSE   │
@@ -63,7 +111,7 @@
 └──────────────┘              └──────────────┘         └──────────────┘
        │                              │                        │
        └──────────────────────────────┴────────────────────────┘
-                            MySQL    Redis    RabbitMQ
+                    MySQL    Redis    RabbitMQ    Milvus
 ```
 
 ### 三服务职责
@@ -87,7 +135,14 @@ Client WS → Gateway(生成MsgID) → MQ Upload → Logic(落库+查路由)
 Client WS → Gateway(生成MsgID, MQ Upload → Logic落库)
   → SSE GET /agent/chat/sse → Agent(Eino推理)
   → SSE stream → Gateway逐chunk推WS → 发送方
-  Agent异步落库AI回复 + 更新Redis session
+  Agent异步落库AI回复 + 更新Redis session + 异步向量写入Milvus
+```
+
+**语义搜索（RAG）**：
+```
+用户: "上次说的方案是什么" → Agent → Embedding
+  → Milvus 向量检索(topK=10) → 回表 MySQL 取真实文本
+  → LLM 汇总 → SSE 流式返回
 ```
 
 ## 目录结构
@@ -114,6 +169,7 @@ apps/
 │   └── service/
 │       ├── chat_service.go  # RPC (SyncUnread/Ack/Delivered)
 │       ├── upload_consumer.go # 上行 MQ 消费 + 下行发布
+│       ├── vector_consumer.go # 向量异步消费 + Milvus 写入
 │       └── user_service.go  # RPC (Login/Register)
 ├── agent/                   # AI Agent 独立服务
 │   ├── main.go
@@ -128,7 +184,7 @@ apps/
 │   ├── models/              # Agent 独立模型
 │   ├── tools/               # AI Tools
 │   │   ├── schedule_message.go
-│   │   └── search_chat_history.go
+│   │   └── search_chat_history.go  # RAG 语义搜索
 │   ├── middleware/           # 限流 + 安全兜底
 │   │   ├── rate_limit.go
 │   │   └── safe_agent.go
@@ -140,27 +196,36 @@ apps/
     ├── cache/               # Redis 单例
     ├── config/              # Viper 配置
     ├── db/                  # MySQL GORM 单例
-    ├── geeRPC/              # 自建 RPC 框架
+    ├── geeRPC/              # 自建 RPC 框架（一致性哈希负载均衡）
     ├── logger/              # Zap 日志
     ├── mq/                  # RabbitMQ 连接 + 发布/消费
     ├── proto/               # pb_msg / pb_user
-    └── utils/               # JWT / Bcrypt / Snowflake
+    ├── utils/               # JWT / Bcrypt / Snowflake
+    └── vector_db/           # Milvus 客户端单例
 ```
 
 ## 快速开始
 
-### 前置条件
-- Go 1.25.8+
-- MySQL 5.7+
-- Redis 6.0+
-- RabbitMQ 3.12+
-
-### 配置
-修改 `apps/config.yaml` 中 MySQL DSN、Redis 地址密码、RabbitMQ URL、Agent API Key。
-
-### 启动服务（按顺序，三个终端）
+### Docker Compose（推荐）
 
 ```bash
+# 一键启动全部服务（基础设施 + 三微服务）
+docker-compose up -d --build
+
+# 查看服务状态
+docker ps
+
+# 查看某个服务日志
+docker logs nexusgo-logic-1 -f
+```
+
+### 本地开发（三终端）
+
+**前置条件**：Go 1.26+、MySQL 8.0+、Redis 6.0+、RabbitMQ 3.12+、Milvus 2.6+
+
+```bash
+# 修改 apps/config.yaml 中各服务地址和密钥
+
 # 1. Logic
 cd apps/logic && go run main.go
 
@@ -205,6 +270,7 @@ Logic 消费解析失败      → Nack → 死信队列
 Logic 落库后 PublishDown → 即使失败已在 DB，SyncUnread 兜底
 Gateway 下行消费        → 消息已落库，ACK 不重入队
 接收方离线              → DB 保底 + SyncUnread 全量拉取
+向量写入失败            → 仅影响语义搜索，不影响主链路
 ```
 
 ## 性能测试
@@ -219,13 +285,17 @@ k6 run perf/k6/ws_ai_stream.js -e VUS=2 -e DURATION=30s
 
 ## 部署
 
-### 单机
-三个 `go run` 即可。
+### 单机（Docker Compose）
 
-### 分布式
-- **Gateway**：多实例 + 负载均衡，每个实例独立 Queue（`gateway.queue.<addr>`）
-- **Logic**：多实例竞争消费 `logic.upload.queue`（天然负载均衡）
-- **Agent**：可独立扩缩容，无状态（session 存 Redis）
+```bash
+docker-compose up -d --build
+```
+
+### 分布式水平扩展
+
+- **Gateway**：Nginx `ip_hash` 前置（保证 WS 粘性） → 多实例，每个实例独立 Queue（`gateway.queue.<addr>`）
+- **Logic**：多实例竞争消费 `logic.upload.queue`（天然负载均衡，直接翻倍吞吐）
+- **Agent**：无状态（session 存 Redis），可独立扩缩容
 - **MySQL/Redis/RabbitMQ**：建议集群 / 主从部署
 
 ## License

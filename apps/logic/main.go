@@ -1,8 +1,9 @@
 package main
 
 import (
-	"GeeRPC"
-	"GeeRPC/midware"
+	"GrowRPC"
+	"GrowRPC/midware"
+	"GrowRPC/registry"
 	"NexusGo/apps/logic/models"
 	"NexusGo/apps/logic/service"
 	"NexusGo/apps/pkg/cache"
@@ -10,8 +11,12 @@ import (
 	"NexusGo/apps/pkg/db"
 	"NexusGo/apps/pkg/logger"
 	"NexusGo/apps/pkg/mq"
+	"NexusGo/apps/pkg/proto/pb_friend"
+	"NexusGo/apps/pkg/proto/pb_group"
+	"NexusGo/apps/pkg/proto/pb_msg"
+	"NexusGo/apps/pkg/proto/pb_user"
 	"NexusGo/apps/pkg/utils"
-	"NexusGo/apps/pkg/vector_db"
+	"context"
 	"log"
 	"net"
 	"strconv"
@@ -39,6 +44,8 @@ func main() {
 		&models.Messages{},
 		&models.Group{},
 		&models.GroupMember{},
+		&models.Friend{},
+		&models.Conversation{},
 	)
 
 	cacheInitErr := cache.InitRedis(config.GlobalConfig.Redis)
@@ -61,17 +68,36 @@ func main() {
 	// 启动上行 MQ 消费者（Gateway → MQ → Logic，替代原 SendMessage RPC）
 	service.StartUploadConsumer()
 
-	vectorDbInitErr := vector_db.InitClient(config.GlobalConfig.Milvus)
-	if cacheInitErr != nil {
-		logger.Log.Fatalf("连接向量数据库失败: %v", vectorDbInitErr)
+	// ─── RPC 框架初始化 ───
+	GrowRPC.Use(midware.LoggerInterceptor, midware.RecoveryInterceptor)
+
+	// 使用代码生成的注册函数，泛型零反射注册
+	logicService := new(service.LogicService)
+	pb_user.RegisterUserServiceServer(GrowRPC.DefaultServer, logicService)
+	pb_msg.RegisterMsgServiceServer(GrowRPC.DefaultServer, logicService)
+	pb_friend.RegisterFriendServiceServer(GrowRPC.DefaultServer, logicService)
+	pb_group.RegisterGroupServiceServer(GrowRPC.DefaultServer, logicService)
+
+	// etcd 服务注册
+	etcdEndpoints := config.GlobalConfig.Server.EtcdEndpoints
+	if len(etcdEndpoints) > 0 {
+		etcdReg, regErr := registry.NewEtcdRegistry(etcdEndpoints, 10)
+		if regErr != nil {
+			logger.Log.Fatalf("etcd 注册中心连接失败: %v", regErr)
+		}
+		addr := "tcp@localhost:" + strconv.Itoa(config.GlobalConfig.Server.LogicPort)
+		if regErr = etcdReg.Register("LogicService", addr, nil); regErr != nil {
+			logger.Log.Fatalf("etcd 服务注册失败: %v", regErr)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go func() {
+			if err := etcdReg.KeepAlive(ctx); err != nil {
+				logger.Log.Errorf("etcd KeepAlive 退出: %v", err)
+			}
+		}()
+		logger.Log.Info("etcd 服务注册成功，服务名: LogicService，地址: " + addr)
 	}
-
-	// 启动向量数据库消费者 消息异步落入向量数据库
-	service.StartVectorConsumer()
-
-	GeeRPC.Use(midware.LoggerInterceptor, midware.RecoveryInterceptor)
-
-	_ = GeeRPC.Register(new(service.LogicService))
 
 	l, err := net.Listen("tcp", ":"+strconv.Itoa(config.GlobalConfig.Server.LogicPort))
 	if err != nil {
@@ -79,5 +105,5 @@ func main() {
 	}
 	logger.Log.Info("Logic RPC 服务端启动成功，端口 :", strconv.Itoa(config.GlobalConfig.Server.LogicPort))
 
-	GeeRPC.Accept(l)
+	GrowRPC.Accept(l)
 }

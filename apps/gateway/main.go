@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"NexusGo/apps/gateway/api/upload_api"
 	"NexusGo/apps/gateway/router"
 	"NexusGo/apps/gateway/rpcclient"
 	"NexusGo/apps/gateway/ws"
@@ -46,6 +47,10 @@ func main() {
 	}
 
 	rpcclient.InitRPCClient()
+
+	if err := upload_api.InitUploadDir("./uploads"); err != nil {
+		logger.Log.Fatalf("初始化上传目录失败: %v", err)
+	}
 
 	// 初始化 RabbitMQ：Gateway 作为消息消费者，订阅自身专属 Queue
 	gatewayAddr := config.GlobalConfig.Server.GatewayAddr

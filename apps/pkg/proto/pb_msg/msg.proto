@@ -66,10 +66,60 @@ message ReadMessagesReply {
 }
 
 // 读消息ACK
-message ackMessageArgs {
+message AckMessageArgs {
   int64 msg_id = 1;
 }
 
-message ackMessageReply {
+message AckMessageReply {
   bool success = 1;
+}
+
+message GetConversationsArgs {
+  int64 user_id = 1;
+}
+
+message ConversationItem {
+  int64 target_id = 1;
+  int32 session_type = 2; // 1: 单聊, 2: 群聊
+  int64 unread_count = 3;
+  int64 owner_id = 4;
+}
+
+message GetConversationsReply {
+  repeated ConversationItem conversations = 1;
+}
+
+message GetChatHistoryArgs {
+  int64 user_id = 1;
+  int64 target_id = 2;
+  int64 cursor = 3;
+  int64 limit = 4;
+}
+
+message GetChatHistoryReply {
+  repeated MessageItem messages = 1;
+  int64 next_cursor = 2;
+  bool has_more = 3;
+  int64 target_id = 4;
+}
+
+message MarkReadArgs {
+  int64 user_id = 1;
+  int64 target_id = 2;
+  int64 last_read_msg_id = 3;
+  int32 session_type = 4;
+}
+
+message MarkReadReply {
+  bool success = 1;
+}
+
+service MsgService {
+  rpc SyncUnread(SyncUnreadArgs) returns (SyncUnreadReply);
+  rpc NotifyDelivered(NotifyDeliveredArgs) returns (NotifyDeliveredReply);
+  rpc AckMessage(AckMessageArgs) returns (AckMessageReply);
+  rpc ReadMessages(ReadMessagesArgs) returns (ReadMessagesReply);
+  rpc GetConversations(GetConversationsArgs) returns (GetConversationsReply);
+  rpc GetChatHistory(GetChatHistoryArgs) returns (GetChatHistoryReply);
+  rpc MarkMessageRead(MarkReadArgs) returns (MarkReadReply);
 }
