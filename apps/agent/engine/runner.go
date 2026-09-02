@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"NexusGo/apps/agent/graph"
 	"NexusGo/apps/agent/mcp"
 	"NexusGo/apps/agent/memory"
 	"NexusGo/apps/agent/middleware"
@@ -14,6 +15,7 @@ import (
 	"github.com/cloudwego/eino/adk/middlewares/patchtoolcalls"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
+	"github.com/cloudwego/eino/schema"
 	"strings"
 	"sync"
 )
@@ -57,6 +59,16 @@ func ClearCachedRunner() {
 	runnerMu.Lock()
 	cacheRunner = nil
 	runnerMu.Unlock()
+	graph.ResetOrchestrator()
+}
+
+// chatModelAdapter 适配 deepseek.ChatModel → graph.ChatModel 接口
+type chatModelAdapter struct {
+	cm *deepseek.ChatModel
+}
+
+func (a *chatModelAdapter) Generate(ctx context.Context, messages []*schema.Message) (*schema.Message, error) {
+	return a.cm.Generate(ctx, messages)
 }
 
 // 加载热重载配置
@@ -97,6 +109,10 @@ func buildChatModel(ctx context.Context) (*deepseek.ChatModel, error) {
 		return nil, fmt.Errorf("init model failed: %w", err)
 	}
 	logger.Log.Infof("AI 模型初始化成功，provider=%s model=%s", config.GlobalConfig.Agent.Default, defaultAgent.ModelName)
+
+	// 注入 RAG Orchestrator（graph 包不依赖 deepseek，通过 adapter 解耦）
+	graph.SetChatModel(&chatModelAdapter{cm: cm})
+
 	return cm, nil
 }
 
@@ -105,6 +121,7 @@ func buildAgent(ctx context.Context, cm *deepseek.ChatModel) (*adk.ChatModelAgen
 	toolList := []tool.BaseTool{
 		tools.MustSearchHistoryTool(),
 		tools.MustSchMessageTool(),
+		tools.MustSummarizeGroupTool(),
 	}
 
 	// MCP工具

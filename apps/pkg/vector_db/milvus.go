@@ -51,6 +51,12 @@ func InitClient(milvusConfig config.MilvusConfig) error {
 		} else {
 			logger.Log.Infof("记忆向量表初始化成功！")
 		}
+		initErr = InitGroupDocCollection()
+		if initErr != nil {
+			logger.Log.Errorf("群文档向量表初始化失败: %v", initErr)
+		} else {
+			logger.Log.Infof("群文档向量表初始化成功！")
+		}
 	})
 	return initErr
 }

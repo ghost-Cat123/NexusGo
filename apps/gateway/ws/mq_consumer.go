@@ -65,6 +65,20 @@ func handleMQDelivery(d amqp.Delivery) {
 	var marshErr error
 	if payload.ChatType == mq.ChatTypeFriendRequest {
 		pushMsg, marshErr = marshalFriendRequestPush(payload.SenderID, payload.Content)
+	} else if payload.ChatType == mq.ChatTypeFriendResolved {
+		pushMsg, marshErr = marshalFriendResolvedPush(payload.SenderID, payload.Content)
+	} else if payload.ChatType == mq.ChatTypeFriendDeleted {
+		pushMsg, marshErr = marshalFriendDeletedPush(payload.SenderID)
+	} else if payload.ChatType == mq.ChatTypeGroupCreated {
+		pushMsg, marshErr = marshalGroupCreatedPush(payload.SenderID, payload.GroupID, payload.Content)
+	} else if payload.ChatType == mq.ChatTypeGroupDissolved {
+		pushMsg, marshErr = marshalGroupDissolvedPush(payload.GroupID)
+	} else if payload.ChatType == mq.ChatTypeGroupJoinRequest {
+		pushMsg, marshErr = marshalGroupJoinRequestPush(payload.SenderID, payload.GroupID)
+	} else if payload.ChatType == mq.ChatTypeGroupJoinApproved {
+		pushMsg, marshErr = marshalGroupJoinApprovedPush(payload.GroupID)
+	} else if payload.ChatType == mq.ChatTypeGroupMemberChanged {
+		pushMsg, marshErr = marshalGroupMemberChangedPush(payload.GroupID)
 	} else {
 		pushMsg, marshErr = marshalChatPush(payload.MsgID, payload.SeqID, payload.GroupID, payload.SenderID, payload.Content)
 	}

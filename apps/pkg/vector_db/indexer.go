@@ -58,6 +58,8 @@ func MemoryDocumentConverter(_ context.Context, docs []*schema.Document, vectors
 	userIDs := make([]int64, len(docs))
 	sessionIDs := make([]string, len(docs))
 	summary := make([]string, len(docs))
+	importances := make([]int64, len(docs))
+	memoryTypes := make([]string, len(docs))
 	createTimes := make([]int64, len(docs))
 	embeddings := make([][]float32, len(docs))
 	for i, doc := range docs {
@@ -66,6 +68,15 @@ func MemoryDocumentConverter(_ context.Context, docs []*schema.Document, vectors
 		userIDs[i] = doc.MetaData["user_id"].(int64)
 		sessionIDs[i] = doc.MetaData["session_id"].(string)
 		createTimes[i] = doc.MetaData["create_time"].(int64)
+		// importance / memory_type 带默认值兜底
+		if v, ok := doc.MetaData["importance"]; ok {
+			importances[i] = v.(int64)
+		}
+		if v, ok := doc.MetaData["memory_type"]; ok {
+			memoryTypes[i] = v.(string)
+		} else {
+			memoryTypes[i] = "general"
+		}
 		emb := make([]float32, len(vectors[i]))
 		for j, v := range vectors[i] {
 			emb[j] = float32(v)
@@ -77,6 +88,8 @@ func MemoryDocumentConverter(_ context.Context, docs []*schema.Document, vectors
 		column.NewColumnInt64("user_id", userIDs),
 		column.NewColumnVarChar("session_id", sessionIDs),
 		column.NewColumnVarChar("summary", summary),
+		column.NewColumnInt64("importance", importances),
+		column.NewColumnVarChar("memory_type", memoryTypes),
 		column.NewColumnInt64("create_time", createTimes),
 		column.NewColumnFloatVector("embedding", int(VectorDim), embeddings),
 	}, nil

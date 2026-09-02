@@ -1,0 +1,144 @@
+{"level":"INFO","ts":"2026-07-14T19:02:12.017+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:02:12.099+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:10:51.494+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:10:51.560+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:11:17.819+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:11:17.884+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:11:50.964+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:11:51.056+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:14:33.886+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:14:33.950+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:14:34.051+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:14:34.064+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:14:34.064+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:14:34.068+0800","caller":"vector_db/memory_collection.go:34","msg":"Collection memory_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:14:34.068+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:17:46.477+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:17:46.543+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:17:46.557+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:17:46.561+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:17:46.561+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:17:46.564+0800","caller":"vector_db/memory_collection.go:34","msg":"Collection memory_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:17:46.564+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:21:14.392+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:21:14.472+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:21:14.499+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:21:14.516+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:21:14.516+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:21:14.523+0800","caller":"vector_db/memory_collection.go:34","msg":"Collection memory_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:21:14.523+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:46:18.824+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:46:18.924+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:46:18.946+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:46:18.950+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:46:18.952+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:46:18.954+0800","caller":"vector_db/memory_collection.go:34","msg":"Collection memory_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:46:18.954+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:47:33.568+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:47:33.652+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:47:33.676+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:47:33.681+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:47:33.681+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:47:33.686+0800","caller":"vector_db/memory_collection.go:34","msg":"Collection memory_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:47:33.686+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:47:56.827+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:47:56.916+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:47:56.935+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:47:56.939+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:47:56.939+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:47:56.945+0800","caller":"vector_db/memory_collection.go:34","msg":"Collection memory_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:47:56.945+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:51:12.223+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-14T19:51:12.291+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-14T19:51:12.331+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:51:12.336+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:51:12.336+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-14T19:51:12.339+0800","caller":"vector_db/memory_collection.go:34","msg":"Collection memory_vectors already exists"}
+{"level":"INFO","ts":"2026-07-14T19:51:12.339+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:43:32.652+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T13:43:32.762+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T13:43:32.772+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:43:32.776+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T13:43:32.776+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:43:32.778+0800","caller":"vector_db/memory_collection.go:34","msg":"Collection memory_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T13:43:32.778+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:52:31.940+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T13:52:31.958+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T13:52:31.963+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:52:31.964+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T13:52:31.964+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"WARN","ts":"2026-07-18T13:52:31.965+0800","caller":"vector_db/memory_collection.go:38","msg":"Collection memory_vectors 已存在，删除重建以更新 schema..."}
+{"level":"INFO","ts":"2026-07-18T13:52:33.679+0800","caller":"vector_db/memory_collection.go:68","msg":"Milvus Collection [memory_vectors] 初始化并加载成功！(含 importance/memory_type 标量字段)"}
+{"level":"INFO","ts":"2026-07-18T13:52:33.679+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:54:14.609+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T13:54:14.627+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T13:54:14.631+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:54:14.633+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T13:54:14.633+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"WARN","ts":"2026-07-18T13:54:14.634+0800","caller":"vector_db/memory_collection.go:38","msg":"Collection memory_vectors 已存在，删除重建以更新 schema..."}
+{"level":"INFO","ts":"2026-07-18T13:54:15.725+0800","caller":"vector_db/memory_collection.go:68","msg":"Milvus Collection [memory_vectors] 初始化并加载成功！(含 importance/memory_type 标量字段)"}
+{"level":"INFO","ts":"2026-07-18T13:54:15.725+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:55:25.221+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T13:55:25.235+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T13:55:25.242+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:55:25.243+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T13:55:25.243+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"WARN","ts":"2026-07-18T13:55:25.244+0800","caller":"vector_db/memory_collection.go:38","msg":"Collection memory_vectors 已存在，删除重建以更新 schema..."}
+{"level":"INFO","ts":"2026-07-18T13:55:26.134+0800","caller":"vector_db/memory_collection.go:68","msg":"Milvus Collection [memory_vectors] 初始化并加载成功！(含 importance/memory_type 标量字段)"}
+{"level":"INFO","ts":"2026-07-18T13:55:26.134+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:56:23.732+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T13:56:23.746+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T13:56:23.752+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T13:56:23.753+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T13:56:23.753+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"WARN","ts":"2026-07-18T13:56:23.754+0800","caller":"vector_db/memory_collection.go:38","msg":"Collection memory_vectors 已存在，删除重建以更新 schema..."}
+{"level":"INFO","ts":"2026-07-18T13:56:24.842+0800","caller":"vector_db/memory_collection.go:68","msg":"Milvus Collection [memory_vectors] 初始化并加载成功！(含 importance/memory_type 标量字段)"}
+{"level":"INFO","ts":"2026-07-18T13:56:24.842+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T14:04:37.318+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T14:04:37.333+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T14:04:37.338+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T14:04:37.339+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T14:04:37.339+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"WARN","ts":"2026-07-18T14:04:37.340+0800","caller":"vector_db/memory_collection.go:38","msg":"Collection memory_vectors 已存在，删除重建以更新 schema..."}
+{"level":"INFO","ts":"2026-07-18T14:04:38.827+0800","caller":"vector_db/memory_collection.go:68","msg":"Milvus Collection [memory_vectors] 初始化并加载成功！(含 importance/memory_type 标量字段)"}
+{"level":"INFO","ts":"2026-07-18T14:04:38.827+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T14:05:08.071+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T14:05:08.087+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T14:05:08.094+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T14:05:08.096+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T14:05:08.096+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"WARN","ts":"2026-07-18T14:05:08.097+0800","caller":"vector_db/memory_collection.go:38","msg":"Collection memory_vectors 已存在，删除重建以更新 schema..."}
+{"level":"INFO","ts":"2026-07-18T14:05:09.185+0800","caller":"vector_db/memory_collection.go:68","msg":"Milvus Collection [memory_vectors] 初始化并加载成功！(含 importance/memory_type 标量字段)"}
+{"level":"INFO","ts":"2026-07-18T14:05:09.185+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T14:06:40.214+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T14:06:40.227+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T14:06:40.233+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T14:06:40.234+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T14:06:40.234+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"WARN","ts":"2026-07-18T14:06:40.235+0800","caller":"vector_db/memory_collection.go:38","msg":"Collection memory_vectors 已存在，删除重建以更新 schema..."}
+{"level":"INFO","ts":"2026-07-18T14:06:41.737+0800","caller":"vector_db/memory_collection.go:68","msg":"Milvus Collection [memory_vectors] 初始化并加载成功！(含 importance/memory_type 标量字段)"}
+{"level":"INFO","ts":"2026-07-18T14:06:41.737+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T15:05:27.437+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T15:05:27.451+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T15:05:27.456+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T15:05:27.457+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T15:05:27.457+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"WARN","ts":"2026-07-18T15:05:27.458+0800","caller":"vector_db/memory_collection.go:38","msg":"Collection memory_vectors 已存在，删除重建以更新 schema..."}
+{"level":"INFO","ts":"2026-07-18T15:05:29.157+0800","caller":"vector_db/memory_collection.go:68","msg":"Milvus Collection [memory_vectors] 初始化并加载成功！(含 importance/memory_type 标量字段)"}
+{"level":"INFO","ts":"2026-07-18T15:05:29.157+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T15:10:19.374+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T15:10:19.390+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T15:10:19.395+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T15:10:19.396+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T15:10:19.396+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"WARN","ts":"2026-07-18T15:10:19.397+0800","caller":"vector_db/memory_collection.go:38","msg":"Collection memory_vectors 已存在，删除重建以更新 schema..."}
+{"level":"INFO","ts":"2026-07-18T15:10:21.310+0800","caller":"vector_db/memory_collection.go:68","msg":"Milvus Collection [memory_vectors] 初始化并加载成功！(含 importance/memory_type 标量字段)"}
+{"level":"INFO","ts":"2026-07-18T15:10:21.310+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T15:11:21.570+0800","caller":"logger/logger.go:48","msg":"✅ Zap 日志组件初始化成功，输出路径: logs/system.log"}
+{"level":"INFO","ts":"2026-07-18T15:11:21.583+0800","caller":"db/mysql_client.go:27","msg":"数据库单例初始化成功！max_idle=10 max_open=100"}
+{"level":"INFO","ts":"2026-07-18T15:11:21.588+0800","caller":"vector_db/milvus.go:40","msg":"向量数据库单例初始化成功！"}
+{"level":"INFO","ts":"2026-07-18T15:11:21.590+0800","caller":"vector_db/message_collection.go:33","msg":"Collection message_vectors already exists"}
+{"level":"INFO","ts":"2026-07-18T15:11:21.590+0800","caller":"vector_db/milvus.go:46","msg":"消息向量表初始化成功！"}
+{"level":"WARN","ts":"2026-07-18T15:11:21.591+0800","caller":"vector_db/memory_collection.go:38","msg":"Collection memory_vectors 已存在，删除重建以更新 schema..."}
+{"level":"INFO","ts":"2026-07-18T15:11:22.888+0800","caller":"vector_db/memory_collection.go:68","msg":"Milvus Collection [memory_vectors] 初始化并加载成功！(含 importance/memory_type 标量字段)"}
+{"level":"INFO","ts":"2026-07-18T15:11:22.888+0800","caller":"vector_db/milvus.go:52","msg":"记忆向量表初始化成功！"}

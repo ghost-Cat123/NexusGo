@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"NexusGo/apps/logic/dao"
 	"NexusGo/apps/logic/models"
@@ -39,6 +40,10 @@ func (s *LogicService) UserRegister(ctx context.Context, req *pb_user.UserRegist
 	user := models.NewUser(req.UserId, req.UserName, password, req.Nickname, finalAvatar)
 	err = dao.InsertUser(user)
 	if err != nil {
+		// MySQL 1062: Duplicate entry — 用户名唯一索引冲突
+		if strings.Contains(err.Error(), "1062") || strings.Contains(err.Error(), "Duplicate entry") {
+			return errors.New("用户名已存在")
+		}
 		return err
 	}
 	resp.Success = true

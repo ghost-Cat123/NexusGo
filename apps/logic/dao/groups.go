@@ -34,3 +34,13 @@ func GetGroupsByIDs(groupIDs []int64) ([]models.Group, error) {
 	err := db.GetDB().Where("group_id IN ?", groupIDs).Find(&groups).Error
 	return groups, err
 }
+
+func DeleteGroup(groupID int64) error {
+	return db.GetDB().Where("group_id = ?", groupID).Delete(&models.Group{}).Error
+}
+
+func SearchGroups(keyword string) ([]models.Group, error) {
+	var groups []models.Group
+	err := db.GetDB().Where("group_name LIKE ?", "%"+keyword+"%").Find(&groups).Error
+	return groups, err
+}

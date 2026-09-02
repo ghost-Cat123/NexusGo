@@ -18,9 +18,9 @@ import (
 
 const (
 	// WindowSize 触发摘要压缩的阈值（Redis List 长度达到此值时触发）
-	WindowSize = 4
+	WindowSize = 20
 	// KeepAfterCompress 压缩后保留的最新消息条数
-	KeepAfterCompress = 2
+	KeepAfterCompress = 15
 )
 
 // RedisStore 单例 store，负责创建 session
@@ -131,16 +131,17 @@ func (s *Session) triggerSummaryCompress() {
 		logger.Log.Errorf("[Memory] LLM 摘要生成失败: %v", err)
 		return
 	}
-	logger.Log.Infof("[Memory] 用户 [%d] 摘要生成成功，长度=%d", s.UserID, len(summary))
+	logger.Log.Infof("[Memory] 用户 [%d] 摘要生成成功，类型=%s 重要性=%d 长度=%d",
+		s.UserID, summary.Type, summary.Importance, len(summary.Summary))
 
 	// 4. 落库 MySQL（持久化摘要）
-	if err := dao.SaveSummary(s.UserID, s.ID, summary); err != nil {
+	if err := dao.SaveSummary(s.UserID, s.ID, summary.Summary, summary.Type, summary.Tags, int8(summary.Importance)); err != nil {
 		logger.Log.Errorf("[Memory] 摘要落库失败: %v", err)
 		// 落库失败不影响继续压缩 Redis（避免 Redis 无限增长）
 	}
 
 	// 同时将摘要放入向量数据库
-	if err := embeddingMemoryToMilvus(ctx, s.UserID, s.ID, summary); err != nil {
+	if err := embeddingMemoryToMilvus(ctx, s.UserID, s.ID, summary.Summary, summary.Type, int8(summary.Importance)); err != nil {
 		logger.Log.Warnf("[Memory] Milvus 记忆索引失败已降级为普通摘要: %v", err)
 	}
 
@@ -158,7 +159,7 @@ func (s *Session) triggerSummaryCompress() {
 	logger.Log.Infof("[Memory] 用户 [%d] 摘要压缩完成，压缩了 %d 条消息", s.UserID, toCompress)
 }
 
-func embeddingMemoryToMilvus(ctx context.Context, userID int64, sessionID string, summary string) error {
+func embeddingMemoryToMilvus(ctx context.Context, userID int64, sessionID string, summary string, memoryType string, importance int8) error {
 	// 1. embedder
 	embedder, err := vdb.GetEmbedder(config.GlobalConfig.Milvus)
 	if err != nil {
@@ -180,6 +181,8 @@ func embeddingMemoryToMilvus(ctx context.Context, userID int64, sessionID string
 		MetaData: map[string]any{
 			"user_id":     userID,
 			"session_id":  sessionID,
+			"memory_type": memoryType,
+			"importance":  int64(importance),
 			"create_time": time.Now().Unix(),
 		},
 	}

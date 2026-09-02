@@ -118,8 +118,8 @@ func (s *LogicService) GetChatHistory(ctx context.Context, req *pb_msg.GetChatHi
 		resp.NextCursor = msgs[len(msgs)-1].MsgId
 	}
 
-	// 首屏结果写入 Redis，TTL 5 分钟
-	if req.Cursor == 0 {
+	// 首屏结果写入 Redis，TTL 5 分钟（不缓存空结果）
+	if req.Cursor == 0 && len(msgs) > 0 {
 		if data, err := json.Marshal(resp); err == nil {
 			cacheKey := fmt.Sprintf("chat:history:%d:%d:%d:%d", req.UserId, req.TargetId, 0, req.Limit)
 			cache.GetCache().Set(ctx, cacheKey, data, 5*time.Minute)
@@ -129,7 +129,7 @@ func (s *LogicService) GetChatHistory(ctx context.Context, req *pb_msg.GetChatHi
 }
 
 func (s *LogicService) MarkMessageRead(ctx context.Context, req *pb_msg.MarkReadArgs, resp *pb_msg.MarkReadReply) error {
-	err := dao.ClearUnread(req.UserId, req.TargetId)
+	err := dao.ClearUnread(req.UserId, req.TargetId, int8(req.SessionType))
 	if err != nil {
 		return err
 	}

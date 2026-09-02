@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package pb_friend;
+
+option go_package = "NexusGo/apps/pkg/proto/pb_friend";
+
+message ApplyFriendArgs {
+  int64 user_id = 1;
+  int64 friend_id = 2;
+  string apply_msg = 3;
+}
+
+message ApplyFriendReply {
+  bool success = 1;
+}
+
+message ResolveFriendArgs {
+  int64 user_id = 1;
+  int64 friend_id = 2;
+  string action = 3; // "accept" or "reject"
+}
+
+message ResolveFriendReply {
+  bool success = 1;
+}
+
+message GetFriendListArgs {
+  int64 user_id = 1;
+}
+
+message FriendItem {
+  int64 friend_id = 1;
+  string nickname = 2;
+  string avatar = 3;
+  int32 status = 4;
+}
+
+message GetFriendListReply {
+  repeated FriendItem friends = 1;
+}
+
+message DeleteFriendArgs {
+  int64 user_id = 1;
+  int64 friend_id = 2;
+}
+
+message DeleteFriendReply {
+  bool success = 1;
+}
+
+message GetPendingRequestsArgs {
+  int64 user_id = 1;
+}
+
+message PendingRequestItem {
+  int64 user_id = 1;
+  string username = 2;
+  string nickname = 3;
+  string avatar = 4;
+  string apply_msg = 5;
+  string created_at = 6;
+}
+
+message GetPendingRequestsReply {
+  repeated PendingRequestItem requests = 1;
+}
+
+service FriendService {
+  rpc ApplyFriend(ApplyFriendArgs) returns (ApplyFriendReply);
+  rpc ResolveFriend(ResolveFriendArgs) returns (ResolveFriendReply);
+  rpc GetFriendList(GetFriendListArgs) returns (GetFriendListReply);
+  rpc DeleteFriend(DeleteFriendArgs) returns (DeleteFriendReply);
+  rpc GetPendingRequests(GetPendingRequestsArgs) returns (GetPendingRequestsReply);
+}

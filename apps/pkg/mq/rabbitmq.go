@@ -26,7 +26,14 @@ const (
 	ChatTypeSingle        = "single_chat"
 	ChatTypeGroup         = "group_chat"
 	ChatTypeAI            = "ai_chat"
-	ChatTypeFriendRequest = "friend_request"
+	ChatTypeFriendRequest  = "friend_request"
+	ChatTypeFriendResolved = "friend_request_resolved"
+	ChatTypeFriendDeleted  = "friend_deleted"
+	ChatTypeGroupCreated   = "group_created"
+	ChatTypeGroupDissolved    = "group_dissolved"
+	ChatTypeGroupJoinRequest  = "group_join_request"
+	ChatTypeGroupJoinApproved = "group_join_approved"
+	ChatTypeGroupMemberChanged = "group_member_changed"
 )
 
 // DownPayload 下行消息体，Logic 生产、Gateway 消费。

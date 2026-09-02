@@ -81,6 +81,7 @@ func main() {
 	r.GET("/agent/chat/sse", handler.ChatSSE)
 	// 审批路由
 	r.POST("/agent/chat/approve", handler.ApproveSSE)
+	r.POST("/agent/documents/index", handler.IndexDocumentHandler)
 	port := strconv.Itoa(config.GlobalConfig.Server.AgentPort)
 	// 创建http服务
 	serve := &http.Server{

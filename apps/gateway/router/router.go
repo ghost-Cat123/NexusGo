@@ -69,10 +69,15 @@ func SetupRouter() *gin.Engine {
 		authGroup.GET("/group/members", group_api.GetGroupMembersHandler)
 		authGroup.POST("/group/join", group_api.JoinGroupHandler)
 		authGroup.POST("/group/leave", group_api.LeaveGroupHandler)
+		authGroup.POST("/group/dissolve", group_api.DissolveGroupHandler)
+		authGroup.GET("/group/search", group_api.SearchGroupHandler)
+		authGroup.POST("/group/request_join", group_api.RequestJoinGroupHandler)
+		authGroup.POST("/group/approve_join", group_api.ApproveJoinGroupHandler)
 		authGroup.GET("/group/messages", group_api.GetGroupMessagesHandler)
 
 		// 2.5 文件上传
 		authGroup.POST("/upload", upload_api.UploadHandler)
+		authGroup.POST("/group/:id/documents", group_api.UploadDocHandler) // 群文档上传
 	}
 
 	// 3. 处理 websocket长连接路由 (WS 可以在连接时验证 Token)

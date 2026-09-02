@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package math;
+
+option go_package = "./testdata";
+
+message MathArgs {
+  int32 a = 1;
+  int32 b = 2;
+}
+
+message MathReply {
+  int32 result = 1;
+}
+
+service MathService {
+  rpc Add(MathArgs) returns (MathReply);
+  rpc Divide(MathArgs) returns (MathReply);
+}

@@ -14,6 +14,7 @@ var destructiveToolNames = map[string]bool{
 // 只读工具
 var readOnlyToolNames = map[string]bool{
 	"search_chat_history": true,
+	"summarize_group":     true,
 }
 
 // IsDestructiveTool 返回是否是中断类型工具

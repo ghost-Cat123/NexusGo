@@ -33,3 +33,7 @@ func InsertGroupMember(member *models.GroupMember) error {
 func DeleteGroupMember(groupID, userID int64) error {
 	return db.GetDB().Where("group_id = ? AND user_id = ?", groupID, userID).Delete(&models.GroupMember{}).Error
 }
+
+func DeleteAllGroupMembers(groupID int64) error {
+	return db.GetDB().Where("group_id = ?", groupID).Delete(&models.GroupMember{}).Error
+}

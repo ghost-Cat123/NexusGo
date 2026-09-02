@@ -26,7 +26,7 @@ func GetUnreadMessages(receiverId int64) ([]models.Messages, error) {
 	result := db.GetDB().Where("receiver_id = ? AND is_read = ?", receiverId, false).Find(&messages)
 	return messages, result.Error
 }
-
+ 
 func MarkMessagesAsRead(receiverId int64) error {
 	result := db.GetDB().Model(&models.Messages{}).
 		Where("receiver_id = ? AND is_read = ?", receiverId, false).
@@ -63,7 +63,7 @@ func GetChatHistory(userID, targetID, cursor, limit int64) ([]models.Messages, e
 		limit = 20
 	}
 	var messages []models.Messages
-	query := db.GetDB().Where("((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?))", userID, targetID, targetID, userID)
+	query := db.GetDB().Where("group_id = 0").Where("((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?))", userID, targetID, targetID, userID)
 	if cursor > 0 {
 		query = query.Where("msg_id < ?", cursor)
 	}
@@ -71,15 +71,27 @@ func GetChatHistory(userID, targetID, cursor, limit int64) ([]models.Messages, e
 	return messages, err
 }
 
-func GetGroupHistory(groupID, cursor, limit int64) ([]models.Messages, error) {
+func GetGroupHistory(groupID, userID, cursor, limit int64) ([]models.Messages, error) {
 	if limit <= 0 || limit > maxChatLimit {
 		limit = 20
 	}
 	var messages []models.Messages
-	query := db.GetDB().Where("group_id = ?", groupID)
+	query := db.GetDB().Where("group_id = ? AND receiver_id = ?", groupID, userID)
 	if cursor > 0 {
 		query = query.Where("msg_id < ?", cursor)
 	}
 	err := query.Order("msg_id DESC").Limit(int(limit)).Find(&messages).Error
 	return messages, err
+}
+
+// DeleteMessagesBetween 删除两个用户之间的所有单聊消息
+func DeleteMessagesBetween(userA, userB int64) error {
+	return db.GetDB().Where(
+		"(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)",
+		userA, userB, userB, userA,
+	).Where("group_id = 0").Delete(&models.Messages{}).Error
+}
+
+func DeleteGroupMessages(groupID int64) error {
+	return db.GetDB().Where("group_id = ?", groupID).Delete(&models.Messages{}).Error
 }

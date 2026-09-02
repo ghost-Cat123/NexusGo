@@ -44,8 +44,8 @@ func TestMemoryDocumentConverter(t *testing.T) {
 		t.Fatalf("MemoryDocumentConverter 失败: %v", err)
 	}
 
-	if len(cols) != 6 {
-		t.Fatalf("期望 6 列, got=%d", len(cols))
+	if len(cols) != 8 {
+		t.Fatalf("期望 8 列 (v2: 含 importance/memory_type), got=%d", len(cols))
 	}
 }
 

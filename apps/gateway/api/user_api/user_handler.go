@@ -76,8 +76,11 @@ func UserRegisterHandler(c *gin.Context) {
 	ctx := xclient.WithRoutingKey(context.Background(), req.UserName)
 	rpcReply, err := rpcclient.UserServiceClient.UserRegister(ctx, rpcArgs)
 	if err != nil {
-		logger.Log.Errorf("内部 RPC 调用失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "系统繁忙"})
+		logger.Log.Warnf("注册失败: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":  400,
+			"error": err.Error(),
+		})
 		return
 	}
 

@@ -18,7 +18,6 @@ import (
 	"NexusGo/apps/gateway/rpcclient"
 	"NexusGo/apps/pkg/logger"
 	"NexusGo/apps/pkg/proto/pb_msg"
-	"log"
 )
 
 // agentHTTPClient 是全局共享的 HTTP 客户端。
@@ -44,13 +43,18 @@ func NotifyDeliveredRPC(ctx context.Context, senderID, msgID int64) {
 }
 
 func marshalChatPush(msgID, seqID, groupID, from int64, content string) ([]byte, error) {
+	sessionType := 1
+	if groupID > 0 {
+		sessionType = 2
+	}
 	return json.Marshal(map[string]interface{}{
-		"chat_type": "chat_push",
-		"msg_id":    msgID,
-		"seq_id":    seqID,
-		"from":      from,
-		"group_id":  groupID,
-		"content":   content,
+		"chat_type":    "chat_push",
+		"msg_id":       msgID,
+		"seq_id":       seqID,
+		"from":         from,
+		"group_id":     groupID,
+		"content":      content,
+		"session_type": sessionType,
 	})
 }
 
@@ -59,6 +63,59 @@ func marshalFriendRequestPush(from int64, content string) ([]byte, error) {
 		"chat_type": "friend_request",
 		"from":      from,
 		"apply_msg": content,
+	})
+}
+
+func marshalFriendResolvedPush(from int64, action string) ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"chat_type": "friend_request_resolved",
+		"from":      from,
+		"action":    action,
+	})
+}
+
+func marshalFriendDeletedPush(from int64) ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"chat_type": "friend_deleted",
+		"from":      from,
+	})
+}
+
+func marshalGroupCreatedPush(from, groupID int64, groupName string) ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"chat_type":  "group_created",
+		"from":       from,
+		"group_id":   groupID,
+		"group_name": groupName,
+	})
+}
+
+func marshalGroupDissolvedPush(groupID int64) ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"chat_type": "group_dissolved",
+		"group_id":  groupID,
+	})
+}
+
+func marshalGroupJoinRequestPush(from, groupID int64) ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"chat_type": "group_join_request",
+		"from":      from,
+		"group_id":  groupID,
+	})
+}
+
+func marshalGroupJoinApprovedPush(groupID int64) ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"chat_type": "group_join_approved",
+		"group_id":  groupID,
+	})
+}
+
+func marshalGroupMemberChangedPush(groupID int64) ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"chat_type": "group_member_changed",
+		"group_id":  groupID,
 	})
 }
 
@@ -241,7 +298,7 @@ func handleAck(userId int64, msgData []byte) {
 		SenderId int64 `json:"sender_id"`
 	}
 	if err := json.Unmarshal(msgData, &ackReq); err != nil {
-		log.Println("ACK 参数解析失败", err)
+		logger.Log.Errorf("ACK 参数解析失败: %v", err)
 		return
 	}
 	ackMessageArgs := &pb_msg.AckMessageArgs{
@@ -252,13 +309,13 @@ func handleAck(userId int64, msgData []byte) {
 	ctx := xclient.WithRoutingKey(context.Background(), routingKey)
 	_, err := rpcclient.MsgServiceClient.AckMessage(ctx, ackMessageArgs)
 	if err != nil {
-		log.Printf("更新已读状态失败: %v", err)
+		logger.Log.Errorf("更新已读状态失败: %v", err)
 		return
 	}
 
 	if senderClient, ok := GlobalCliMap.Get(strconv.FormatInt(ackReq.SenderId, 10)); ok {
 		ackMsg := fmt.Sprintf(`{"chat_type": "ack", "read_receipt": %d, "msg_id": %d}`, userId, ackReq.MsgId)
 		senderClient.SendMessage([]byte(ackMsg))
-		log.Printf("ACK成功发送给 [%d]", ackReq.SenderId)
+		logger.Log.Infof("ACK成功发送给 [%d]", ackReq.SenderId)
 	}
 }

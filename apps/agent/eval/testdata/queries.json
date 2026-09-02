@@ -1,0 +1,200 @@
+[
+  {
+    "id": "q1",
+    "query": "帮我搜和用户4关于消息的聊天",
+    "target_user": "zs",
+    "target_group": "",
+    "keywords": "消息 接收",
+    "topic": "技术配置",
+    "difficulty": "easy",
+    "expected_msg_ids": [2],
+    "description": "精确关键词匹配，FULLTEXT 直接命中"
+  },
+  {
+    "id": "q2",
+    "query": "搜test群关于测试的讨论",
+    "target_user": "",
+    "target_group": "test",
+    "keywords": "测试",
+    "topic": "运维部署",
+    "difficulty": "easy",
+    "expected_msg_ids": [],
+    "description": "群聊快速定位，关键词+群过滤"
+  },
+  {
+    "id": "q3",
+    "query": "之前说的消息能不能正常收到",
+    "target_user": "zs",
+    "target_group": "",
+    "keywords": "消息 正常 接收",
+    "topic": "故障排查",
+    "difficulty": "hard",
+    "expected_msg_ids": [7472843045231136768],
+    "description": "语义模糊查询，原消息为'我的消息可以正常接收'"
+  },
+  {
+    "id": "q4",
+    "query": "群聊里说的消息接收问题最后怎么定的",
+    "target_user": "",
+    "target_group": "test",
+    "keywords": "消息 接收",
+    "topic": "故障排查",
+    "difficulty": "medium",
+    "expected_msg_ids": [],
+    "description": "群聊模糊语义，同义词匹配"
+  },
+  {
+    "id": "q5",
+    "query": "搜索单聊中提到的消息",
+    "target_user": "zs",
+    "target_group": "",
+    "keywords": "消息",
+    "topic": "技术配置",
+    "difficulty": "easy",
+    "expected_msg_ids": [7472843045231136768],
+    "description": "单聊精确检索消息相关"
+  },
+  {
+    "id": "q6",
+    "query": "帮我找关于用户4说的消息",
+    "target_user": "",
+    "target_group": "test",
+    "keywords": "消息",
+    "topic": "技术配置",
+    "difficulty": "medium",
+    "expected_msg_ids": [],
+    "description": "群聊技术讨论，FULLTEXT+群过滤"
+  },
+  {
+    "id": "q7",
+    "query": "上次说的消息能不能收到",
+    "target_user": "zs",
+    "target_group": "",
+    "keywords": "消息 收到",
+    "topic": "故障排查",
+    "difficulty": "hard",
+    "expected_msg_ids": [7472843099329269760],
+    "description": "原消息'收到我的消息也可以接收'，模糊匹配"
+  },
+  {
+    "id": "q8",
+    "query": "消息测试那次的结果在哪里",
+    "target_user": "",
+    "target_group": "test",
+    "keywords": "消息 测试",
+    "topic": "故障排查",
+    "difficulty": "medium",
+    "expected_msg_ids": [],
+    "description": "群聊故障回溯，关键词组合"
+  },
+  {
+    "id": "q9",
+    "query": "用户4上次发的消息内容是什么",
+    "target_user": "zs",
+    "target_group": "",
+    "keywords": "消息 内容",
+    "topic": "技术配置",
+    "difficulty": "medium",
+    "expected_msg_ids": [7472843045231136768, 7472843099329269760],
+    "description": "单聊配置追溯"
+  },
+  {
+    "id": "q10",
+    "query": "上周群里讨论的消息问题",
+    "target_user": "",
+    "target_group": "test",
+    "keywords": "消息",
+    "topic": "技术配置",
+    "difficulty": "hard",
+    "expected_msg_ids": [],
+    "description": "群聊语义搜索"
+  },
+  {
+    "id": "q11",
+    "query": "查一下关于消息接收怎么处理的讨论",
+    "target_user": "",
+    "target_group": "test",
+    "keywords": "消息 接收 处理",
+    "topic": "技术配置",
+    "difficulty": "medium",
+    "expected_msg_ids": [],
+    "description": "群聊多关键词"
+  },
+  {
+    "id": "q12",
+    "query": "消息接收错误那次具体是什么原因",
+    "target_user": "zs",
+    "target_group": "",
+    "keywords": "消息 接收 错误",
+    "topic": "故障排查",
+    "difficulty": "medium",
+    "expected_msg_ids": [],
+    "description": "原消息'我的消息可以正常接收'，否定形式模糊匹配"
+  },
+  {
+    "id": "q13",
+    "query": "消息接收的问题最后怎么修复的",
+    "target_user": "",
+    "target_group": "test",
+    "keywords": "消息 接收 修复",
+    "topic": "故障排查",
+    "difficulty": "hard",
+    "expected_msg_ids": [],
+    "description": "语义指代模糊"
+  },
+  {
+    "id": "q14",
+    "query": "消息通信那次排查的结果是什么",
+    "target_user": "zs",
+    "target_group": "",
+    "keywords": "消息 通信 排查",
+    "topic": "故障排查",
+    "difficulty": "easy",
+    "expected_msg_ids": [7472843045231136768, 7472843099329269760],
+    "description": "单聊排查，关键词精确匹配"
+  },
+  {
+    "id": "q15",
+    "query": "消息测试里面的通信怎么设置",
+    "target_user": "",
+    "target_group": "test",
+    "keywords": "消息 通信 设置",
+    "topic": "运维部署",
+    "difficulty": "medium",
+    "expected_msg_ids": [],
+    "description": "群聊运维类检索"
+  },
+  {
+    "id": "q16",
+    "query": "问一下消息收发那次怎么处理的",
+    "target_user": "",
+    "target_group": "test",
+    "keywords": "消息 收发 处理",
+    "topic": "故障排查",
+    "difficulty": "hard",
+    "expected_msg_ids": [],
+    "description": "群聊模糊语义"
+  },
+  {
+    "id": "q17",
+    "query": "消息通信测试的解决方案",
+    "target_user": "zs",
+    "target_group": "",
+    "keywords": "消息 通信 测试",
+    "topic": "运维部署",
+    "difficulty": "easy",
+    "expected_msg_ids": [],
+    "description": "单聊运维关键词"
+  },
+  {
+    "id": "q18",
+    "query": "上次测试的讨论结果是什么",
+    "target_user": "",
+    "target_group": "test",
+    "keywords": "测试 结果 讨论",
+    "topic": "运维部署",
+    "difficulty": "medium",
+    "expected_msg_ids": [],
+    "description": "群聊语义"
+  }
+]

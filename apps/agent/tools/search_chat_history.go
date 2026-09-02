@@ -2,6 +2,7 @@ package tools
 
 import (
 	"NexusGo/apps/agent/dao"
+	"NexusGo/apps/agent/graph"
 	"NexusGo/apps/agent/models"
 	"NexusGo/apps/pkg/config"
 	"NexusGo/apps/pkg/utils"
@@ -79,34 +80,77 @@ func searchHistoryInvoker(ctx context.Context, req *SearHistoryReq) (*SearHistor
 		}
 	}
 
-	// ── 第一级：MySQL FULLTEXT 精确路由 ──
-	messages, err := dao.SearchHistoryMessages(currentUserID, targetUserID, targetGroupID, keywords, queryStart, queryEnd, req.Limit)
-	if err != nil {
-		// DB 异常不算命中失败，打日志后按 0 条处理，尝试降级
-		fmt.Printf("[Search] FULLTEXT 查询异常: %v，尝试语义降级\n", err)
-		messages = nil
+	// ── 并行召回：MySQL FULLTEXT + Milvus 语义检索 ──
+	type fetchResult struct {
+		msgs []models.Messages
+		err  error
 	}
+	fulltextCh := make(chan fetchResult, 1)
+	milvusCh := make(chan fetchResult, 1)
 
-	// ── 第二级：Milvus 语义降级 ──
-	if len(messages) == 0 {
-		messages = semanticFallback(ctx, currentUserID, req.Keywords, targetUserID, targetGroupID, queryStart)
+	// 路 1：FULLTEXT
+	go func() {
+		msgs, err := dao.SearchHistoryMessages(currentUserID, targetUserID, targetGroupID, keywords, queryStart, queryEnd, req.Limit)
+		fulltextCh <- fetchResult{msgs, err}
+	}()
+	// 路 2：Milvus 语义
+	go func() {
+		msgs := semanticFallback(ctx, currentUserID, req.Keywords, targetUserID, targetGroupID, queryStart)
+		milvusCh <- fetchResult{msgs, nil}
+	}()
+
+	ftRes := <-fulltextCh
+	mvRes := <-milvusCh
+
+	// 合并去重（以 MsgId 为 key）
+	seen := make(map[int64]bool)
+	var candidates []graph.Document
+	addMsgs := func(msgs []models.Messages, source string) {
+		for _, msg := range msgs {
+			if seen[msg.MsgId] {
+				continue
+			}
+			seen[msg.MsgId] = true
+			senderName := resolveSenderName(msg.SenderId, currentUserID, targetUserID, targetUserName)
+			candidates = append(candidates, graph.Document{
+				Content: fmt.Sprintf("[%s]: %s", senderName, msg.Content),
+				Score:   0.5, // FULLTEXT 无分数，给默认值
+				Source:  source,
+			})
+		}
 	}
+	if ftRes.err != nil {
+		fmt.Printf("[Search] FULLTEXT 查询异常: %v\n", ftRes.err)
+	}
+	addMsgs(ftRes.msgs, "fulltext")
+	addMsgs(mvRes.msgs, "milvus")
 
-	if len(messages) == 0 {
+	if len(candidates) == 0 {
 		return &SearHistoryResp{
 			Result: "未找到匹配的聊天记录，建议调整关键词或扩大时间范围",
 		}, nil
 	}
 
-	var rawText string
-	for _, msg := range messages {
-		senderName := resolveSenderName(msg.SenderId, currentUserID, targetUserID, targetUserName)
-		rawText += fmt.Sprintf("[%s]: %s\n", senderName, msg.Content)
+	// ── RAG 重排 ──
+	orchestrator := graph.GetOrchestrator()
+	if orchestrator == nil {
+		fmt.Printf("[Search] Orchestrator 未初始化，返回未重排结果\n")
+	} else {
+		candidates = orchestrator.Rerank(ctx, req.Keywords, candidates)
 	}
 
-	return &SearHistoryResp{
-		Result: fmt.Sprintf("以下是原始聊天记录，请根据用户的需求进行总结或提取:\n%s", rawText),
-	}, nil
+	// 组装返回
+	var sb strings.Builder
+	sb.WriteString("以下是相关聊天记录，请根据用户的需求进行总结或提取:\n")
+	for i, doc := range candidates {
+		sb.WriteString(doc.Content)
+		sb.WriteString("\n")
+		if i >= req.Limit && req.Limit > 0 {
+			break
+		}
+	}
+
+	return &SearHistoryResp{Result: sb.String()}, nil
 }
 
 // semanticFallback 语义降级：Embedding → Milvus → 回表 MySQL

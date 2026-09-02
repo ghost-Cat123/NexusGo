@@ -155,7 +155,7 @@ func batchInsertWorker(batchCh <-chan batchItem) {
 					if isDuplicateKey(sErr) {
 						// 重复键：消息在之前已落库（幂等重试场景），视为成功，推下行 + ACK
 						logger.Log.Infof("[Batch] 消息 %d 已存在，幂等跳过", it.msg.MsgId)
-						go pushDownAndAckWithAddr(it, addr)
+						go updateConversationAndPush(it, addr)
 					} else {
 						// 真实错误（磁盘满、连接断等），送死信队列
 						logger.Log.Errorf("[Batch] 消息 %d 单条插入失败，送死信: %v", it.msg.MsgId, sErr)
@@ -163,16 +163,16 @@ func batchInsertWorker(batchCh <-chan batchItem) {
 					}
 					continue
 				}
-				go pushDownAndAckWithAddr(it, addr)
+				go updateConversationAndPush(it, addr)
 			}
 			return
 		}
 
-		// 批量插入成功：并发推下行 + 单条独立 ACK
+		// 批量插入成功：更新会话 + 并发推下行 + 单条独立 ACK
 		// 不用 multiple=true，避免多 worker 并行时 delivery tag 乱序导致漏 ACK
 		for _, it := range items {
 			addr := receiverMap[it.payload.ReceiverID]
-			go pushDownAndAckWithAddr(it, addr)
+			go updateConversationAndPush(it, addr)
 		}
 		logger.Log.Debugf("[Batch] 批量写入 %d 条成功", len(items))
 	}
@@ -192,6 +192,35 @@ func batchInsertWorker(batchCh <-chan batchItem) {
 			flush() // 定时兜底刷
 		}
 	}
+}
+
+// updateConversationAndPush 更新会话后推下行
+func updateConversationAndPush(it batchItem, gatewayAddr string) {
+	sessionType := int8(1)
+	targetID := it.payload.SenderID
+	if it.msg.GroupId != 0 {
+		sessionType = 2
+		targetID = it.msg.GroupId
+	}
+	// 接收方会话：未读数+1
+	if err := dao.UpsertConversation(it.payload.ReceiverID, targetID, sessionType, 1, it.msg.MsgId); err != nil {
+		logger.Log.Warnf("[Upload] 接收方会话 Upsert 失败: %v", err)
+	}
+	// 发送方会话：未读数不变
+	senderTarget := it.payload.ReceiverID
+	if it.msg.GroupId != 0 {
+		senderTarget = it.msg.GroupId
+	}
+	if err := dao.UpsertConversation(it.payload.SenderID, senderTarget, sessionType, 0, it.msg.MsgId); err != nil {
+		logger.Log.Warnf("[Upload] 发送方会话 Upsert 失败: %v", err)
+	}
+
+	// 清除双方的聊天记录缓存，确保下次拉取不走缓存
+	if it.msg.GroupId == 0 {
+		invalidateChatCache(it.payload.SenderID, it.payload.ReceiverID)
+	}
+
+	pushDownAndAckWithAddr(it, gatewayAddr)
 }
 
 // pushDownWithAddr 用已查出的网关地址推送下行
@@ -231,6 +260,17 @@ func pushDownAndAckWithAddr(it batchItem, gatewayAddr string) {
 	}
 }
 
+// invalidateChatCache 清除单聊双方的聊天记录 Redis 缓存，确保下次拉取不走缓存
+func invalidateChatCache(userA, userB int64) {
+	ctx := context.Background()
+	for _, limit := range []int64{20, 50, 100} {
+		cache.GetCache().Del(ctx,
+			fmt.Sprintf("chat:history:%d:%d:%d:%d", userA, userB, 0, limit),
+			fmt.Sprintf("chat:history:%d:%d:%d:%d", userB, userA, 0, limit),
+		)
+	}
+}
+
 // isDuplicateKey 判断是否是 MySQL 主键/唯一键冲突错误（Error 1062）
 func isDuplicateKey(err error) bool {
 	if err == nil {
@@ -240,7 +280,7 @@ func isDuplicateKey(err error) bool {
 		strings.Contains(err.Error(), "Duplicate entry")
 }
 
-// handleGroupChat 群聊消息写扩散（保持不变）
+// handleGroupChat 群聊消息写扩散
 func handleGroupChat(payload *mq.UploadPayload) error {
 	ctx := context.Background()
 	members, err := dao.GetGroupMembers(payload.GroupID)
@@ -248,38 +288,33 @@ func handleGroupChat(payload *mq.UploadPayload) error {
 		return fmt.Errorf("[Upload] 查询群成员失败: %v", err)
 	}
 	for _, memberID := range members {
-		// 准备要插入的消息
 		msg := models.NewMessages(payload.SenderID, memberID, payload.GroupID, payload.Content, false)
-		msg.MsgId = utils.GetSnowflake().Generate()
 		msg.SeqId = payload.SeqID
-		// 接收者为自己
 		if memberID == payload.SenderID {
-			// sender自身：落库，不下行，用作向量数据库锚点
+			msg.MsgId = payload.MsgID // sender 保留网关生成的 ID
 			msg.IsRead = true
 			msg.SendStatus = models.SendStatusSentConfirmed
-			err := dao.InsertMessage(msg)
-			if err != nil {
-				logger.Log.Errorf("[Upload][Group] 向量锚点消息落库失败: %v", err)
-				continue
-			}
-			// 使用该MsgID存入向量数据库
-			vecID := msg.MsgId
-			vecPayload := mq.VectorPayload{
-				MsgID:    vecID,
-				ConvID:   payload.ConvID,
-				SenderID: payload.SenderID,
-				SendTime: time.Now().Unix(),
-				Content:  payload.Content,
-			}
-			if body, _ := json.Marshal(vecPayload); len(body) > 0 {
-				_ = mq.PublishVector(ctx, "vector.all", body)
-			}
+		} else {
+			msg.MsgId = utils.GetSnowflake().Generate() // 每个接收者唯一 ID
 		}
-		// 其他用户正常走数据库并下行
 		if err := dao.InsertMessage(msg); err != nil {
 			logger.Log.Errorf("[Upload][Group] 群成员 %d 落库失败: %v", memberID, err)
 			continue
 		}
+
+		// 创建/更新群会话
+		unreadDelta := 1
+		if memberID == payload.SenderID {
+			unreadDelta = 0
+		}
+		if uErr := dao.UpsertConversation(memberID, payload.GroupID, 2, unreadDelta, msg.MsgId); uErr != nil {
+			logger.Log.Warnf("[Upload][Group] 成员 %d 会话更新失败: %v", memberID, uErr)
+		}
+
+		if memberID == payload.SenderID {
+			continue
+		}
+
 		redisKey := "route:user:" + strconv.FormatInt(memberID, 10)
 		gatewayAddr, err := cache.GetCache().Get(ctx, redisKey).Result()
 		if errors.Is(err, redis.Nil) {
@@ -302,6 +337,10 @@ func handleGroupChat(payload *mq.UploadPayload) error {
 		if pubErr := mq.PublishDown(ctx, gatewayAddr, body); pubErr != nil {
 			logger.Log.Warnf("[Upload][Group] 群成员 %d 下行 Publish 失败: %v", memberID, pubErr)
 		}
+	}
+	// 清除群聊历史缓存
+	for _, limit := range []int64{20, 50, 100} {
+		cache.GetCache().Del(ctx, fmt.Sprintf("chat:history:group:%d:%d:%d", payload.GroupID, 0, limit))
 	}
 	return nil
 }

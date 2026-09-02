@@ -97,3 +97,17 @@ func GetMessagesByIDs(msgIDs []int64) ([]models.Messages, error) {
 		Order("create_time DESC").Find(&messages).Error
 	return messages, err
 }
+
+// GetGroupMessages 拉取最近群聊消息 不需要关键词过滤
+func GetGroupMessages(currentUserID, groupID int64, startTime, endTime time.Time, limit int) ([]models.Messages, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 200
+	}
+	var messages []models.Messages
+	err := db.GetDB().Where("group_id = ? AND receiver_id = ?", groupID, currentUserID).
+		Where("create_time BETWEEN ? AND ?", startTime, endTime).
+		Order("create_time DESC").
+		Limit(limit).
+		Find(&messages).Error
+	return messages, err
+}
