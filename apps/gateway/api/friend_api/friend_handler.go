@@ -1,7 +1,6 @@
 package friend_api
 
 import (
-	"context"
 	"net/http"
 
 	"NexusGo/apps/gateway/rpcclient"
@@ -22,7 +21,7 @@ func ApplyFriendHandler(c *gin.Context) {
 		return
 	}
 
-	_, err := rpcclient.FriendServiceClient.ApplyFriend(context.Background(), &pb_friend.ApplyFriendArgs{
+	_, err := rpcclient.FriendServiceClient.ApplyFriend(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_friend.ApplyFriendArgs{
 		UserId:   userID.(int64),
 		FriendId: req.FriendID,
 		ApplyMsg: req.ApplyMsg,
@@ -47,7 +46,7 @@ func ResolveFriendHandler(c *gin.Context) {
 		return
 	}
 
-	_, err := rpcclient.FriendServiceClient.ResolveFriend(context.Background(), &pb_friend.ResolveFriendArgs{
+	_, err := rpcclient.FriendServiceClient.ResolveFriend(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_friend.ResolveFriendArgs{
 		UserId:   userID.(int64),
 		FriendId: req.FriendID,
 		Action:   req.Action,
@@ -64,7 +63,7 @@ func ResolveFriendHandler(c *gin.Context) {
 func GetFriendListHandler(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	reply, err := rpcclient.FriendServiceClient.GetFriendList(context.Background(), &pb_friend.GetFriendListArgs{
+	reply, err := rpcclient.FriendServiceClient.GetFriendList(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_friend.GetFriendListArgs{
 		UserId: userID.(int64),
 	})
 	if err != nil {
@@ -100,7 +99,7 @@ func DeleteFriendHandler(c *gin.Context) {
 		return
 	}
 
-	_, err := rpcclient.FriendServiceClient.DeleteFriend(context.Background(), &pb_friend.DeleteFriendArgs{
+	_, err := rpcclient.FriendServiceClient.DeleteFriend(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_friend.DeleteFriendArgs{
 		UserId:   userID.(int64),
 		FriendId: req.FriendID,
 	})
@@ -116,7 +115,7 @@ func DeleteFriendHandler(c *gin.Context) {
 func GetPendingRequestsHandler(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	reply, err := rpcclient.FriendServiceClient.GetPendingRequests(context.Background(), &pb_friend.GetPendingRequestsArgs{
+	reply, err := rpcclient.FriendServiceClient.GetPendingRequests(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_friend.GetPendingRequestsArgs{
 		UserId: userID.(int64),
 	})
 	if err != nil {

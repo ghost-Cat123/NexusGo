@@ -27,7 +27,7 @@ func CreateGroupHandler(c *gin.Context) {
 		return
 	}
 
-	reply, err := rpcclient.GroupServiceClient.CreateGroup(context.Background(), &pb_group.CreateGroupArgs{
+	reply, err := rpcclient.GroupServiceClient.CreateGroup(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.CreateGroupArgs{
 		UserId:    userID.(int64),
 		GroupName: req.GroupName,
 		MemberIds: req.MemberIDs,
@@ -51,7 +51,7 @@ func CreateGroupHandler(c *gin.Context) {
 func GetGroupListHandler(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	reply, err := rpcclient.GroupServiceClient.GetGroupList(context.Background(), &pb_group.GetGroupListArgs{
+	reply, err := rpcclient.GroupServiceClient.GetGroupList(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.GetGroupListArgs{
 		UserId: userID.(int64),
 	})
 	if err != nil {
@@ -77,10 +77,11 @@ func GetGroupListHandler(c *gin.Context) {
 
 // GetGroupInfoHandler 获取群信息
 func GetGroupInfoHandler(c *gin.Context) {
+	userID, _ := c.Get("user_id")
 	groupIDStr := c.Query("group_id")
 	groupID, _ := strconv.ParseInt(groupIDStr, 10, 64)
 
-	reply, err := rpcclient.GroupServiceClient.GetGroupInfo(context.Background(), &pb_group.GetGroupInfoArgs{
+	reply, err := rpcclient.GroupServiceClient.GetGroupInfo(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.GetGroupInfoArgs{
 		GroupId: groupID,
 	})
 	if err != nil {
@@ -101,10 +102,11 @@ func GetGroupInfoHandler(c *gin.Context) {
 
 // GetGroupMembersHandler 获取群成员
 func GetGroupMembersHandler(c *gin.Context) {
+	userID, _ := c.Get("user_id")
 	groupIDStr := c.Query("group_id")
 	groupID, _ := strconv.ParseInt(groupIDStr, 10, 64)
 
-	reply, err := rpcclient.GroupServiceClient.GetGroupMembers(context.Background(), &pb_group.GetGroupMembersArgs{
+	reply, err := rpcclient.GroupServiceClient.GetGroupMembers(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.GetGroupMembersArgs{
 		GroupId: groupID,
 	})
 	if err != nil {
@@ -140,7 +142,7 @@ func JoinGroupHandler(c *gin.Context) {
 		return
 	}
 
-	_, err := rpcclient.GroupServiceClient.JoinGroup(context.Background(), &pb_group.JoinGroupArgs{
+	_, err := rpcclient.GroupServiceClient.JoinGroup(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.JoinGroupArgs{
 		UserId:  userID.(int64),
 		GroupId: req.GroupID,
 	})
@@ -163,7 +165,7 @@ func LeaveGroupHandler(c *gin.Context) {
 		return
 	}
 
-	_, err := rpcclient.GroupServiceClient.LeaveGroup(context.Background(), &pb_group.LeaveGroupArgs{
+	_, err := rpcclient.GroupServiceClient.LeaveGroup(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.LeaveGroupArgs{
 		UserId:  userID.(int64),
 		GroupId: req.GroupID,
 	})
@@ -186,7 +188,7 @@ func DissolveGroupHandler(c *gin.Context) {
 		return
 	}
 
-	_, err := rpcclient.GroupServiceClient.DissolveGroup(context.Background(), &pb_group.DissolveGroupArgs{
+	_, err := rpcclient.GroupServiceClient.DissolveGroup(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.DissolveGroupArgs{
 		UserId:  userID.(int64),
 		GroupId: req.GroupID,
 	})
@@ -213,7 +215,7 @@ func GetGroupMessagesHandler(c *gin.Context) {
 		limit = 20
 	}
 
-	reply, err := rpcclient.GroupServiceClient.GetGroupHistory(context.Background(), &pb_group.GetGroupHistoryArgs{
+	reply, err := rpcclient.GroupServiceClient.GetGroupHistory(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.GetGroupHistoryArgs{
 		GroupId: groupID,
 		UserId:  userID.(int64),
 		Cursor:  cursor,
@@ -248,12 +250,13 @@ func GetGroupMessagesHandler(c *gin.Context) {
 
 // SearchGroupHandler 搜索群聊
 func SearchGroupHandler(c *gin.Context) {
+	userID, _ := c.Get("user_id")
 	keyword := c.Query("keyword")
 	if keyword == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "请输入搜索关键词"})
 		return
 	}
-	reply, err := rpcclient.GroupServiceClient.SearchGroup(context.Background(), &pb_group.SearchGroupArgs{Keyword: keyword})
+	reply, err := rpcclient.GroupServiceClient.SearchGroup(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.SearchGroupArgs{Keyword: keyword})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "搜索失败", "error": err.Error()})
 		return
@@ -279,7 +282,7 @@ func RequestJoinGroupHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误"})
 		return
 	}
-	info, err := rpcclient.GroupServiceClient.GetGroupInfo(context.Background(), &pb_group.GetGroupInfoArgs{GroupId: req.GroupID})
+	info, err := rpcclient.GroupServiceClient.GetGroupInfo(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.GetGroupInfoArgs{GroupId: req.GroupID})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "查群信息失败", "error": err.Error()})
 		return
@@ -304,16 +307,16 @@ func RequestJoinGroupHandler(c *gin.Context) {
 func ApproveJoinGroupHandler(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var req struct {
-		GroupID  int64  `json:"group_id"`
-		UserID   int64  `json:"user_id"`
-		Action   string `json:"action"`
+		GroupID int64  `json:"group_id"`
+		UserID  int64  `json:"user_id"`
+		Action  string `json:"action"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误"})
 		return
 	}
 	if req.Action == "accept" {
-		_, err := rpcclient.GroupServiceClient.JoinGroup(context.Background(), &pb_group.JoinGroupArgs{
+		_, err := rpcclient.GroupServiceClient.JoinGroup(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_group.JoinGroupArgs{
 			UserId: req.UserID, GroupId: req.GroupID,
 		})
 		if err != nil {

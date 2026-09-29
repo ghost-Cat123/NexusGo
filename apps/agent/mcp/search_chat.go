@@ -3,6 +3,7 @@ package mcp
 import (
 	"NexusGo/apps/agent/dao"
 	"NexusGo/apps/agent/models"
+	"NexusGo/apps/agent/retrieval"
 	"NexusGo/apps/pkg/config"
 	"NexusGo/apps/pkg/utils"
 	vdb "NexusGo/apps/pkg/vector_db"
@@ -18,7 +19,7 @@ import (
 
 func RegisterSearchChatHistory(s *server.MCPServer) {
 	tool := mcp.NewTool("search_chat_history",
-		mcp.WithDescription("搜索聊天记录。支持关键词+时间范围，MySQL全文索引+Milvus语义向量双路召回，自动降级"),
+		mcp.WithDescription("搜索聊天记录。优先使用会话隔离的 Milvus 语义检索，结果为空时回退 MySQL 全文索引。"),
 		mcp.WithString("target_user", mcp.Description("单聊对象用户名")),
 		mcp.WithString("target_group", mcp.Description("群名称")),
 		mcp.WithString("start_time", mcp.Description("起始时间，RFC3339格式")),
@@ -75,13 +76,21 @@ func RegisterSearchChatHistory(s *server.MCPServer) {
 			limit = int(v)
 		}
 
-		msgs, err := dao.SearchHistoryMessages(currentUserID, targetUserID, targetGroupID, keywords, queryStart, queryEnd, limit)
-		if err != nil {
-			msgs = nil
+		candidateLimit := limit
+		if candidateLimit < 20 {
+			candidateLimit = 20
+		}
+		if candidateLimit > 200 {
+			candidateLimit = 200
 		}
 
+		msgs := semanticMCP(ctx, currentUserID, kwStr, targetUserID, targetGroupID, queryStart, queryEnd, candidateLimit)
 		if len(msgs) == 0 {
-			msgs = semanticMCP(ctx, currentUserID, kwStr, targetUserID, targetGroupID, queryStart)
+			var err error
+			msgs, err = dao.SearchHistoryMessages(currentUserID, targetUserID, targetGroupID, keywords, queryStart, queryEnd, candidateLimit)
+			if err != nil {
+				msgs = nil
+			}
 		}
 
 		if len(msgs) == 0 {
@@ -89,7 +98,10 @@ func RegisterSearchChatHistory(s *server.MCPServer) {
 		}
 
 		var lines []string
-		for _, m := range msgs {
+		for index, m := range msgs {
+			if index >= limit {
+				break
+			}
 			name := fmt.Sprintf("用户%d", m.SenderId)
 			if m.SenderId == currentUserID {
 				name = "你"
@@ -103,7 +115,7 @@ func RegisterSearchChatHistory(s *server.MCPServer) {
 	})
 }
 
-func semanticMCP(ctx context.Context, currentUserID int64, keywords string, targetUserID, targetGroupID int64, queryStart time.Time) []models.Messages {
+func semanticMCP(ctx context.Context, currentUserID int64, keywords string, targetUserID, targetGroupID int64, queryStart, queryEnd time.Time, limit int) []models.Messages {
 	embedder, err := vdb.GetEmbedder(config.GlobalConfig.Milvus)
 	if err != nil {
 		return nil
@@ -118,13 +130,20 @@ func semanticMCP(ctx context.Context, currentUserID int64, keywords string, targ
 	if queryStart.Unix() > 0 {
 		filterExpr += fmt.Sprintf(" && send_time >= %d", queryStart.Unix())
 	}
+	if queryEnd.Unix() > 0 {
+		filterExpr += fmt.Sprintf(" && send_time <= %d", queryEnd.Unix())
+	}
 	retriever, err := vdb.GetRetriever(ctx, vdb.MessageCollection, "embedding",
-		[]string{"msg_id", "sender_id", "send_time"}, 5, embedder)
+		[]string{"msg_id", "sender_id", "send_time"}, limit, embedder)
 	if err != nil {
 		return nil
 	}
 	docs, err := retriever.Retrieve(ctx, keywords, milvusret.WithFilter(filterExpr))
-	if err != nil || len(docs) == 0 {
+	if err != nil {
+		return nil
+	}
+	docs = retrieval.FilterDocumentsByScore(docs, retrieval.MinMessageSemanticScore)
+	if len(docs) == 0 {
 		return nil
 	}
 	var ids []int64
@@ -134,5 +153,13 @@ func semanticMCP(ctx context.Context, currentUserID int64, keywords string, targ
 		}
 	}
 	msgs, _ := dao.GetMessagesByIDs(ids)
-	return msgs
+	ordered := retrieval.OrderMessagesByIDs(msgs, ids)
+	contents := make([]string, 0, len(ordered))
+	for _, message := range ordered {
+		contents = append(contents, message.Content)
+	}
+	if !retrieval.HasContentKeywordCoverage(contents, strings.Fields(keywords)) {
+		return nil
+	}
+	return ordered
 }

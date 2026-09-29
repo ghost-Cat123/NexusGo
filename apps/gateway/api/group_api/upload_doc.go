@@ -36,7 +36,7 @@ func UploadDocHandler(c *gin.Context) {
 
 	// 校验群存在（通过 RPC）
 	uid := userID.(int64)
-	info, err := rpcclient.GroupServiceClient.GetGroupInfo(c, &pb_group.GetGroupInfoArgs{GroupId: groupID})
+	info, err := rpcclient.GroupServiceClient.GetGroupInfo(rpcclient.WithUserRoutingKey(c.Request.Context(), uid), &pb_group.GetGroupInfoArgs{GroupId: groupID})
 	if err != nil || info == nil || info.GroupId == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"code": 404, "msg": "群不存在"})
 		return

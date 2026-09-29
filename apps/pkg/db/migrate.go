@@ -14,7 +14,36 @@ func AutoMigrateTables(models ...interface{}) error {
 	if err := db.AutoMigrate(models...); err != nil {
 		return err
 	}
+	if db.Migrator().HasTable("messages") {
+		if err := EnsureMessagesFullTextIndex(); err != nil {
+			return err
+		}
+	}
 	logger.Log.Infof("[DB] AutoMigrate 完成，共迁移 %d 张表", len(models))
+	return nil
+}
+
+// EnsureMessagesFullTextIndex keeps the MySQL FULLTEXT prerequisite alongside
+// the schema migration. GORM's AutoMigrate does not create FULLTEXT indexes.
+func EnsureMessagesFullTextIndex() error {
+	const indexName = "ft_messages_content"
+	var count int64
+	if err := db.Raw(`
+		SELECT COUNT(*)
+		FROM information_schema.STATISTICS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = 'messages'
+		  AND INDEX_NAME = ?`, indexName).Scan(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	if err := db.Exec(`ALTER TABLE messages ADD FULLTEXT INDEX ft_messages_content (content) WITH PARSER ngram`).Error; err != nil {
+		return err
+	}
+	logger.Log.Info("[DB] 已创建 messages.content 的 ngram FULLTEXT 索引")
 	return nil
 }
 

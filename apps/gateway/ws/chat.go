@@ -263,8 +263,9 @@ func handlerAIChat(senderId int64, msgData []byte) {
 		body, _ := json.Marshal(payload)
 		if pubErr := mq.PublishUpload(bgCtx, "upload.all", body); pubErr != nil {
 			logger.Log.Errorf("[Gateway] AI上行Publish失败: %v", pubErr)
+			return
 		}
-		// 服务端 ACK（落库成功后通知客户端消息已持久化）
+		// Broker Confirm 后再通知客户端；Logic 落库与接收端投递是后续链路。
 		if senderClient, ok := GlobalCliMap.Get(strconv.FormatInt(senderId, 10)); ok {
 			ackMsg := fmt.Sprintf(`{"chat_type":"server_ack","msg_id":%d,"seq_id":%d}`, mid, sid)
 			senderClient.SendMessage([]byte(ackMsg))

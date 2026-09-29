@@ -223,10 +223,11 @@ func updateConversationAndPush(it batchItem, gatewayAddr string) {
 	pushDownAndAckWithAddr(it, gatewayAddr)
 }
 
-// pushDownWithAddr 用已查出的网关地址推送下行
-func pushDownWithAddr(payload *mq.UploadPayload, gatewayAddr string) {
+// pushDownWithAddr 用已查出的网关地址推送下行。空路由代表接收方离线，
+// 消息已落库，后续由未读同步补偿，因此不需要重试上行消息。
+func pushDownWithAddr(payload *mq.UploadPayload, gatewayAddr string) error {
 	if gatewayAddr == "" {
-		return
+		return nil
 	}
 	ctx := context.Background()
 	downPayload := &mq.DownPayload{
@@ -239,13 +240,18 @@ func pushDownWithAddr(payload *mq.UploadPayload, gatewayAddr string) {
 	}
 	body, _ := json.Marshal(downPayload)
 	if err := mq.PublishDown(ctx, gatewayAddr, body); err != nil {
-		logger.Log.Warnf("[Upload] 下行 Publish 失败（已落库）: %v", err)
+		return fmt.Errorf("下行 Publish Confirm 失败: %w", err)
 	}
+	return nil
 }
 
 // pushDownAndAckWithAddr 使用现成地址推送+确认
 func pushDownAndAckWithAddr(it batchItem, gatewayAddr string) {
-	pushDownWithAddr(it.payload, gatewayAddr)
+	if err := pushDownWithAddr(it.payload, gatewayAddr); err != nil {
+		logger.Log.Warnf("[Upload] 消息 %d 下行失败，重新入队: %v", it.msg.MsgId, err)
+		_ = it.d.Nack(false, true)
+		return
+	}
 	_ = it.d.Ack(false)
 	// 下行前异步写入向量数据消费者队列
 	vecPayload := mq.VectorPayload{
@@ -256,7 +262,9 @@ func pushDownAndAckWithAddr(it batchItem, gatewayAddr string) {
 		Content:  it.payload.Content,
 	}
 	if body, _ := json.Marshal(vecPayload); len(body) > 0 {
-		_ = mq.PublishVector(context.Background(), "vector.all", body)
+		if err := mq.PublishVector(context.Background(), "vector.all", body); err != nil {
+			logger.Log.Warnf("[Upload] 消息 %d 向量索引投递失败: %v", it.msg.MsgId, err)
+		}
 	}
 }
 

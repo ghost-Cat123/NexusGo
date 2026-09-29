@@ -2,6 +2,7 @@ package eval
 
 import (
 	"NexusGo/apps/agent/dao"
+	"NexusGo/apps/agent/retrieval"
 	"NexusGo/apps/agent/tools"
 	vdb "NexusGo/apps/pkg/vector_db"
 	"context"
@@ -42,30 +43,61 @@ func RunEvaluation(datasetPath string) (*Report, error) {
 	})
 	results = append(results, semanticResults...)
 
+	// ===== Production Agent strategy: semantic first, FULLTEXT fallback =====
+	semanticFirstResults := evaluateStrategy("SemanticFirstFallback", dataset, semanticFirstSearch)
+	results = append(results, semanticFirstResults...)
+
+	// ===== RRF Hybrid 评测 =====
+	rrfResults := evaluateStrategy("RRF", dataset, rrfSearch)
+	results = append(results, rrfResults...)
+
 	return BuildReport(results, dataset), nil
+}
+
+func semanticFirstSearch(q EvalQuery) []int64 {
+	if ids := milvusSearch(q); len(ids) > 0 {
+		return ids
+	}
+	return fulltextSearch(q)
+}
+
+func rrfSearch(q EvalQuery) []int64 {
+	fulltextCh := make(chan []int64, 1)
+	milvusCh := make(chan []int64, 1)
+	go func() { fulltextCh <- fulltextSearch(q) }()
+	go func() { milvusCh <- milvusSearch(q) }()
+
+	fused := retrieval.FuseRankedIDs(retrieval.DefaultRRFK,
+		retrieval.RankedIDs{Source: "fulltext", IDs: <-fulltextCh},
+		retrieval.RankedIDs{Source: "milvus", IDs: <-milvusCh},
+	)
+	ids := make([]int64, 0, len(fused))
+	for _, result := range fused {
+		ids = append(ids, result.ID)
+	}
+	return ids
 }
 
 func evaluateStrategy(strategy string, dataset *EvalDataset, searchFn func(EvalQuery) []int64) []StrategyResult {
 	var results []StrategyResult
 	for _, q := range dataset.Queries {
-		returnedIDs := searchFn(q)
-
-		// 如果没有标注expected IDs，用返回结果暂时代替
-		expected := q.ExpectedMsgIDs
-		if len(expected) == 0 {
-			// 无标注时用 FULLTEXT 结果作为 expected（默认假设 FULLTEXT 的是对的）
-			expected = returnedIDs
+		if len(q.ExpectedMsgIDs) == 0 {
+			fmt.Printf("[Eval] %s | %s → skipped: no human relevance labels\n", strategy, q.ID)
+			continue
 		}
+		returnedIDs := searchFn(q)
+		mrr := computeMRR(returnedIDs, q.ExpectedMsgIDs)
 
 		r := StrategyResult{
 			QueryID:     q.ID,
 			Strategy:    strategy,
+			ExpectedIDs: q.ExpectedMsgIDs,
 			ReturnedIDs: returnedIDs,
-			RecallAt1:   computeRecall(returnedIDs, expected, 1),
-			RecallAt3:   computeRecall(returnedIDs, expected, 3),
-			RecallAt5:   computeRecall(returnedIDs, expected, 5),
-			MRR:         computeMRR(returnedIDs, expected),
-			Hit:         len(returnedIDs) > 0,
+			RecallAt1:   computeRecall(returnedIDs, q.ExpectedMsgIDs, 1),
+			RecallAt3:   computeRecall(returnedIDs, q.ExpectedMsgIDs, 3),
+			RecallAt5:   computeRecall(returnedIDs, q.ExpectedMsgIDs, 5),
+			MRR:         mrr,
+			Hit:         mrr > 0,
 		}
 		results = append(results, r)
 
@@ -164,7 +196,11 @@ func milvusSearch(q EvalQuery) (ids []int64) {
 	}
 
 	results, err := retriever.Retrieve(ctx, q.Keywords, milvusret.WithFilter(filterExpr))
-	if err != nil || len(results) == 0 {
+	if err != nil {
+		return nil
+	}
+	results = retrieval.FilterDocumentsByScore(results, retrieval.MinMessageSemanticScore)
+	if len(results) == 0 {
 		return nil
 	}
 
@@ -179,6 +215,13 @@ func milvusSearch(q EvalQuery) (ids []int64) {
 
 	// 回表 MySQL
 	messages, _ := dao.GetMessagesByIDs(msgIDs)
+	contents := make([]string, 0, len(messages))
+	for _, message := range messages {
+		contents = append(contents, message.Content)
+	}
+	if !retrieval.HasContentKeywordCoverage(contents, strings.Fields(q.Keywords)) {
+		return nil
+	}
 	ids = make([]int64, 0, len(messages))
 	for _, msg := range messages {
 		ids = append(ids, msg.MsgId)

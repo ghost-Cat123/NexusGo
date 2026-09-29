@@ -1,7 +1,6 @@
 package chat_api
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 
@@ -15,7 +14,7 @@ import (
 func GetConversationsHandler(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	reply, err := rpcclient.MsgServiceClient.GetConversations(context.Background(), &pb_msg.GetConversationsArgs{
+	reply, err := rpcclient.MsgServiceClient.GetConversations(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_msg.GetConversationsArgs{
 		UserId: userID.(int64),
 	})
 	if err != nil {
@@ -55,7 +54,7 @@ func GetChatMessagesHandler(c *gin.Context) {
 		limit = 20
 	}
 
-	reply, err := rpcclient.MsgServiceClient.GetChatHistory(context.Background(), &pb_msg.GetChatHistoryArgs{
+	reply, err := rpcclient.MsgServiceClient.GetChatHistory(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_msg.GetChatHistoryArgs{
 		UserId:   userID.(int64),
 		TargetId: targetID,
 		Cursor:   cursor,
@@ -92,20 +91,20 @@ func GetChatMessagesHandler(c *gin.Context) {
 func MarkMessageReadHandler(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var req struct {
-		TargetID       int64 `json:"target_id"`
-		LastReadMsgID  int64 `json:"last_read_msg_id"`
-		SessionType    int   `json:"session_type"` // 1: 单聊, 2: 群聊
+		TargetID      int64 `json:"target_id"`
+		LastReadMsgID int64 `json:"last_read_msg_id"`
+		SessionType   int   `json:"session_type"` // 1: 单聊, 2: 群聊
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "msg": "参数错误"})
 		return
 	}
 
-	_, err := rpcclient.MsgServiceClient.MarkMessageRead(context.Background(), &pb_msg.MarkReadArgs{
-		UserId:         userID.(int64),
-		TargetId:       req.TargetID,
-		LastReadMsgId:  req.LastReadMsgID,
-		SessionType:    int32(req.SessionType),
+	_, err := rpcclient.MsgServiceClient.MarkMessageRead(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_msg.MarkReadArgs{
+		UserId:        userID.(int64),
+		TargetId:      req.TargetID,
+		LastReadMsgId: req.LastReadMsgID,
+		SessionType:   int32(req.SessionType),
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "更新已读状态失败", "error": err.Error()})

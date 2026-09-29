@@ -4,6 +4,7 @@ import (
 	"NexusGo/apps/agent/dao"
 	"NexusGo/apps/agent/graph"
 	"NexusGo/apps/agent/models"
+	"NexusGo/apps/agent/retrieval"
 	"NexusGo/apps/pkg/config"
 	"NexusGo/apps/pkg/utils"
 	vdb "NexusGo/apps/pkg/vector_db"
@@ -80,63 +81,40 @@ func searchHistoryInvoker(ctx context.Context, req *SearHistoryReq) (*SearHistor
 		}
 	}
 
-	// ── 并行召回：MySQL FULLTEXT + Milvus 语义检索 ──
-	type fetchResult struct {
-		msgs []models.Messages
-		err  error
+	// Agent receives a natural-language question, so semantic retrieval is the
+	// primary path. FULLTEXT remains a cheap fallback for exact terms when the
+	// vector path is unavailable or has no candidate.
+	candidateLimit := req.Limit
+	if candidateLimit < 20 {
+		candidateLimit = 20
 	}
-	fulltextCh := make(chan fetchResult, 1)
-	milvusCh := make(chan fetchResult, 1)
-
-	// 路 1：FULLTEXT
-	go func() {
-		msgs, err := dao.SearchHistoryMessages(currentUserID, targetUserID, targetGroupID, keywords, queryStart, queryEnd, req.Limit)
-		fulltextCh <- fetchResult{msgs, err}
-	}()
-	// 路 2：Milvus 语义
-	go func() {
-		msgs := semanticFallback(ctx, currentUserID, req.Keywords, targetUserID, targetGroupID, queryStart)
-		milvusCh <- fetchResult{msgs, nil}
-	}()
-
-	ftRes := <-fulltextCh
-	mvRes := <-milvusCh
-
-	// 合并去重（以 MsgId 为 key）
-	seen := make(map[int64]bool)
-	var candidates []graph.Document
-	addMsgs := func(msgs []models.Messages, source string) {
-		for _, msg := range msgs {
-			if seen[msg.MsgId] {
-				continue
-			}
-			seen[msg.MsgId] = true
-			senderName := resolveSenderName(msg.SenderId, currentUserID, targetUserID, targetUserName)
-			candidates = append(candidates, graph.Document{
-				Content: fmt.Sprintf("[%s]: %s", senderName, msg.Content),
-				Score:   0.5, // FULLTEXT 无分数，给默认值
-				Source:  source,
-			})
+	if candidateLimit > 200 {
+		candidateLimit = 200
+	}
+	messages := semanticFallback(ctx, currentUserID, req.Keywords, targetUserID, targetGroupID, queryStart, queryEnd, candidateLimit)
+	source := "semantic"
+	if len(messages) == 0 {
+		var err error
+		messages, err = dao.SearchHistoryMessages(currentUserID, targetUserID, targetGroupID, keywords, queryStart, queryEnd, candidateLimit)
+		if err != nil {
+			fmt.Printf("[Search] FULLTEXT 查询异常: %v\n", err)
 		}
+		source = "fulltext_fallback"
 	}
-	if ftRes.err != nil {
-		fmt.Printf("[Search] FULLTEXT 查询异常: %v\n", ftRes.err)
+
+	candidates := make([]graph.Document, 0, len(messages))
+	for _, msg := range messages {
+		senderName := resolveSenderName(msg.SenderId, currentUserID, targetUserID, targetUserName)
+		candidates = append(candidates, graph.Document{
+			Content: fmt.Sprintf("[%s]: %s", senderName, msg.Content),
+			Source:  source,
+		})
 	}
-	addMsgs(ftRes.msgs, "fulltext")
-	addMsgs(mvRes.msgs, "milvus")
 
 	if len(candidates) == 0 {
 		return &SearHistoryResp{
 			Result: "未找到匹配的聊天记录，建议调整关键词或扩大时间范围",
 		}, nil
-	}
-
-	// ── RAG 重排 ──
-	orchestrator := graph.GetOrchestrator()
-	if orchestrator == nil {
-		fmt.Printf("[Search] Orchestrator 未初始化，返回未重排结果\n")
-	} else {
-		candidates = orchestrator.Rerank(ctx, req.Keywords, candidates)
 	}
 
 	// 组装返回
@@ -153,8 +131,8 @@ func searchHistoryInvoker(ctx context.Context, req *SearHistoryReq) (*SearHistor
 	return &SearHistoryResp{Result: sb.String()}, nil
 }
 
-// semanticFallback 语义降级：Embedding → Milvus → 回表 MySQL
-func semanticFallback(ctx context.Context, currentUserID int64, keywords string, targetUserID, targetGroupID int64, queryStart time.Time) []models.Messages {
+// semanticFallback 语义召回：Embedding → Milvus → 回表 MySQL。
+func semanticFallback(ctx context.Context, currentUserID int64, keywords string, targetUserID, targetGroupID int64, queryStart, queryEnd time.Time, limit int) []models.Messages {
 	embedder, err := vdb.GetEmbedder(config.GlobalConfig.Milvus)
 	if err != nil {
 		fmt.Printf("[Search] Embedder 初始化失败: %v\n", err)
@@ -174,6 +152,9 @@ func semanticFallback(ctx context.Context, currentUserID int64, keywords string,
 	if queryStart.Unix() > 0 {
 		filterExpr += fmt.Sprintf(" && send_time >= %d", queryStart.Unix())
 	}
+	if queryEnd.Unix() > 0 {
+		filterExpr += fmt.Sprintf(" && send_time <= %d", queryEnd.Unix())
+	}
 
 	// 使用 milvus2.WithFilter 生成实现特定选项
 	// WithFilter：绑定标量过滤条件
@@ -181,7 +162,7 @@ func semanticFallback(ctx context.Context, currentUserID int64, keywords string,
 
 	// 输出字段
 	outputFields := []string{"msg_id", "sender_id", "send_time"}
-	retriever, err := vdb.GetRetriever(ctx, vdb.MessageCollection, "embedding", outputFields, 5, embedder)
+	retriever, err := vdb.GetRetriever(ctx, vdb.MessageCollection, "embedding", outputFields, limit, embedder)
 
 	if err != nil {
 		fmt.Printf("[Search] Retriever 初始化失败: %v\n", err)
@@ -190,8 +171,12 @@ func semanticFallback(ctx context.Context, currentUserID int64, keywords string,
 
 	// 将标量过滤选项放入Retrieve的选项中
 	results, err := retriever.Retrieve(ctx, keywords, filterOption)
-	if err != nil || len(results) == 0 {
+	if err != nil {
 		fmt.Printf("[Search] 语义检索无结果: err=%v count=%d\n", err, len(results))
+		return nil
+	}
+	results = retrieval.FilterDocumentsByScore(results, retrieval.MinMessageSemanticScore)
+	if len(results) == 0 {
 		return nil
 	}
 
@@ -213,7 +198,19 @@ func semanticFallback(ctx context.Context, currentUserID int64, keywords string,
 		fmt.Printf("[Search] 回表查询失败: %v\n", err)
 		return nil
 	}
-	return messages
+	ordered := retrieval.OrderMessagesByIDs(messages, msgIDs)
+	if !retrieval.HasContentKeywordCoverage(searchHistoryMessageContents(ordered), strings.Fields(keywords)) {
+		return nil
+	}
+	return ordered
+}
+
+func searchHistoryMessageContents(messages []models.Messages) []string {
+	contents := make([]string, 0, len(messages))
+	for _, message := range messages {
+		contents = append(contents, message.Content)
+	}
+	return contents
 }
 
 func resolveSenderName(senderId, currentUserID, targetUserID int64, targetUserName string) string {

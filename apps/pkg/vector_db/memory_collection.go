@@ -3,7 +3,6 @@ package vector_db
 import (
 	"NexusGo/apps/pkg/logger"
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/milvus-io/milvus/client/v2/entity"
@@ -29,16 +28,15 @@ func InitMemoryCollection() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 数据库表是否存在 → 若存在则删除重建（开发环境，保证 schema 最新）
+	// 已有 Collection 必须保留：启动过程不能隐式删除长期记忆。
+	// Schema 变更应通过显式迁移完成，而不是在服务重启时重建。
 	exists, err := milvusCli.HasCollection(ctx, milvusclient.NewHasCollectionOption(MemoryCollection))
 	if err != nil {
 		return err
 	}
 	if exists {
-		logger.Log.Warnf("Collection %s 已存在，删除重建以更新 schema...", MemoryCollection)
-		if err := milvusCli.DropCollection(ctx, milvusclient.NewDropCollectionOption(MemoryCollection)); err != nil {
-			return fmt.Errorf("删除旧 Collection 失败: %w", err)
-		}
+		logger.Log.Infof("Collection %s already exists; preserving existing memories", MemoryCollection)
+		return nil
 	}
 
 	// 建表

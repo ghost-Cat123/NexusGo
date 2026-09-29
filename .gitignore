@@ -9,3 +9,5 @@ apps/config.yaml
 logs/*.log
 /logs/*.log.gz
 /plan.md
+*.log
+/outputs/

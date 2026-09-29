@@ -9,6 +9,8 @@ import (
 	"NexusGo/apps/pkg/proto/pb_group"
 	"NexusGo/apps/pkg/proto/pb_msg"
 	"NexusGo/apps/pkg/proto/pb_user"
+	"context"
+	"strconv"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -43,9 +45,15 @@ func InitRPCClient() {
 		discovery = xclient.NewMultiServerDiscovery([]string{"tcp@localhost:8001"})
 	}
 
-	LogicRpcClient = xclient.NewXClient(discovery, xclient.RandomSelect, opt)
+	LogicRpcClient = xclient.NewXClient(discovery, xclient.ConsistentHash, opt)
 	UserServiceClient = pb_user.NewUserServiceClient(LogicRpcClient)
 	MsgServiceClient = pb_msg.NewMsgServiceClient(LogicRpcClient)
 	FriendServiceClient = pb_friend.NewFriendServiceClient(LogicRpcClient)
 	GroupServiceClient = pb_group.NewGroupServiceClient(LogicRpcClient)
+}
+
+// WithUserRoutingKey pins a user-scoped RPC to the same Logic instance while
+// the service-discovery membership is unchanged.
+func WithUserRoutingKey(ctx context.Context, userID int64) context.Context {
+	return xclient.WithRoutingKey(ctx, strconv.FormatInt(userID, 10))
 }

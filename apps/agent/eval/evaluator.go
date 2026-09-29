@@ -14,14 +14,15 @@ type SearchResult struct {
 
 // StrategyResult 单条查询 × 单个策略的结果
 type StrategyResult struct {
-	QueryID    string
-	Strategy   string
+	QueryID     string
+	Strategy    string
+	ExpectedIDs []int64
 	ReturnedIDs []int64
-	RecallAt1  float64
-	RecallAt3  float64
-	RecallAt5  float64
-	MRR        float64
-	Hit        bool
+	RecallAt1   float64
+	RecallAt3   float64
+	RecallAt5   float64
+	MRR         float64
+	Hit         bool
 }
 
 // computeRecall 计算 Recall@K

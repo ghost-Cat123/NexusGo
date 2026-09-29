@@ -7,24 +7,25 @@ import (
 
 // Report 评测报告
 type Report struct {
-	DatasetPath   string
-	TotalQueries  int
-	ByStrategy    []DimensionReport
-	ByTopic       []DimensionReport
-	ByDifficulty  []DimensionReport
-	Details       []StrategyResult
+	DatasetPath    string
+	TotalQueries   int
+	LabeledQueries int
+	ByStrategy     []DimensionReport
+	ByTopic        []DimensionReport
+	ByDifficulty   []DimensionReport
+	Details        []StrategyResult
 }
 
 // DimensionReport 按维度聚合的统计
 type DimensionReport struct {
-	Name       string
-	Count      int
-	RecallAt1  float64
-	RecallAt3  float64
-	RecallAt5  float64
-	MRR        float64
-	NDCGAt5    float64
-	HitRate    float64
+	Name      string
+	Count     int
+	RecallAt1 float64
+	RecallAt3 float64
+	RecallAt5 float64
+	MRR       float64
+	NDCGAt5   float64
+	HitRate   float64
 }
 
 // BuildReport 从结果构建报告
@@ -32,6 +33,11 @@ func BuildReport(results []StrategyResult, dataset *EvalDataset) *Report {
 	report := &Report{
 		DatasetPath:  "",
 		TotalQueries: len(dataset.Queries),
+	}
+	for _, query := range dataset.Queries {
+		if len(query.ExpectedMsgIDs) > 0 {
+			report.LabeledQueries++
+		}
 	}
 
 	// 按策略
@@ -73,7 +79,7 @@ func aggregate(name string, results []StrategyResult) DimensionReport {
 			mrr = append(mrr, r.MRR)
 		}
 		if r.MRR >= 0 {
-			ndcg5 = append(ndcg5, computeNDCG(r.ReturnedIDs, getExpectedIDs(results, r.QueryID), 5))
+			ndcg5 = append(ndcg5, computeNDCG(r.ReturnedIDs, r.ExpectedIDs, 5))
 		}
 		if r.Hit {
 			hit = append(hit, 1)
@@ -90,17 +96,11 @@ func aggregate(name string, results []StrategyResult) DimensionReport {
 	return d
 }
 
-func getExpectedIDs(results []StrategyResult, queryID string) []int64 {
-	// 从 results 中找到对应 query 的 expected IDs
-	// 这里简化：返回一个空列表，具体expected从dataset获取
-	return nil
-}
-
 // Format 格式化输出 Report
 func (r *Report) Format() string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("RAG 离线评测报告\n"))
-	sb.WriteString(fmt.Sprintf("数据集: %d 条查询\n\n", r.TotalQueries))
+	sb.WriteString(fmt.Sprintf("数据集: %d 条查询，其中 %d 条有人工相关性标注\n\n", r.TotalQueries, r.LabeledQueries))
 
 	writeTable(&sb, "按策略", r.ByStrategy)
 	sb.WriteString("\n")

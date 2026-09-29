@@ -4,7 +4,9 @@ import (
 	"NexusGo/apps/pkg/logger"
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -23,16 +25,16 @@ const vectorExchangeName = "im.vector.index"
 
 // 消息类型
 const (
-	ChatTypeSingle        = "single_chat"
-	ChatTypeGroup         = "group_chat"
-	ChatTypeAI            = "ai_chat"
-	ChatTypeFriendRequest  = "friend_request"
-	ChatTypeFriendResolved = "friend_request_resolved"
-	ChatTypeFriendDeleted  = "friend_deleted"
-	ChatTypeGroupCreated   = "group_created"
-	ChatTypeGroupDissolved    = "group_dissolved"
-	ChatTypeGroupJoinRequest  = "group_join_request"
-	ChatTypeGroupJoinApproved = "group_join_approved"
+	ChatTypeSingle             = "single_chat"
+	ChatTypeGroup              = "group_chat"
+	ChatTypeAI                 = "ai_chat"
+	ChatTypeFriendRequest      = "friend_request"
+	ChatTypeFriendResolved     = "friend_request_resolved"
+	ChatTypeFriendDeleted      = "friend_deleted"
+	ChatTypeGroupCreated       = "group_created"
+	ChatTypeGroupDissolved     = "group_dissolved"
+	ChatTypeGroupJoinRequest   = "group_join_request"
+	ChatTypeGroupJoinApproved  = "group_join_approved"
 	ChatTypeGroupMemberChanged = "group_member_changed"
 )
 
@@ -68,13 +70,24 @@ type VectorPayload struct {
 	Content  string `json:"content"`
 }
 
-const publishPoolSize = 20
+const (
+	publishPoolSize         = 20
+	publisherConfirmTimeout = 5 * time.Second
+)
+
+// publishChannel serializes publish-and-confirm for one AMQP channel. AMQP
+// confirmations are ordered per channel, so a single publish must wait for its
+// own confirmation before the channel is returned to the pool.
+type publishChannel struct {
+	channel *amqp.Channel
+	mu      sync.Mutex
+}
 
 var (
 	conn       *amqp.Connection
-	channel    *amqp.Channel   // 消费专用（Consume + Ack），不与 Publish 争抢
-	publishChs []*amqp.Channel // Publish 通道池，轮询分发
-	publishIdx uint64          // 轮询计数器
+	channel    *amqp.Channel     // 消费专用（Consume + Ack），不与 Publish 争抢
+	publishChs []*publishChannel // Publish 通道池，轮询分发
+	publishIdx uint64            // 轮询计数器
 )
 
 // InitRabbitMQ 建立连接并声明 Direct Exchange（持久化，重启不消失）。
@@ -148,40 +161,72 @@ func InitRabbitMQ(url string) error {
 	}
 
 	// 创建 Publish 通道池：消费和发布使用独立 Channel，互不阻塞
-	publishChs = make([]*amqp.Channel, publishPoolSize)
+	publishChs = make([]*publishChannel, publishPoolSize)
 	for i := 0; i < publishPoolSize; i++ {
 		ch, e := conn.Channel()
 		if e != nil {
 			return fmt.Errorf("创建 Publish 通道 [%d] 失败: %w", i, e)
 		}
-		publishChs[i] = ch
+		if e = ch.Confirm(false); e != nil {
+			_ = ch.Close()
+			return fmt.Errorf("启用 Publish Confirm [%d] 失败: %w", i, e)
+		}
+		publishChs[i] = &publishChannel{channel: ch}
 	}
-	logger.Log.Infof("✅ Publish 通道池已创建，Size: %d", publishPoolSize)
+	logger.Log.Infof("✅ Publish Confirm 通道池已创建，Size: %d", publishPoolSize)
 
 	return nil
 }
 
 // getPublishCh 轮询选取 Publish 通道，消除单 Channel 争抢瓶颈。
-func getPublishCh() *amqp.Channel {
+func getPublishCh() *publishChannel {
 	i := atomic.AddUint64(&publishIdx, 1)
 	return publishChs[i%uint64(len(publishChs))]
+}
+
+// publish waits for RabbitMQ's publisher confirmation. A returned nil means
+// the broker positively acknowledged this persistent publish; it does not mean
+// a consumer has processed the message or a recipient has received it.
+func (p *publishChannel) publish(ctx context.Context, exchange, routingKey string, body []byte) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	confirmCtx, cancel := context.WithTimeout(ctx, publisherConfirmTimeout)
+	defer cancel()
+
+	confirmation, err := p.channel.PublishWithDeferredConfirmWithContext(
+		confirmCtx,
+		exchange,
+		routingKey,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:  "application/json",
+			DeliveryMode: amqp.Persistent,
+			Body:         body,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("发布消息失败: %w", err)
+	}
+	if confirmation == nil {
+		return fmt.Errorf("发布通道未启用 Publisher Confirm")
+	}
+
+	acked, err := confirmation.WaitContext(confirmCtx)
+	if err != nil {
+		return fmt.Errorf("等待 Publisher Confirm 超时或失败: %w", err)
+	}
+	if !acked {
+		return fmt.Errorf("RabbitMQ 拒绝消息发布")
+	}
+	return nil
 }
 
 // PublishUpload 上行发布（Gateway → MQ → Logic）。
 // routingKey 固定 "upload.all"，所有 Logic 实例竞争消费。
 func PublishUpload(ctx context.Context, routingKey string, body []byte) error {
-	return getPublishCh().PublishWithContext(
-		ctx,
-		uploadExchangeName, // exchange
-		routingKey,         // routing key：目标网关地址
-		false,              // mandatory
-		false,              // immediate
-		amqp.Publishing{
-			ContentType:  "application/json",
-			DeliveryMode: amqp.Persistent, // 持久化消息，Broker 重启不丢
-			Body:         body,
-		},
-	)
+	return getPublishCh().publish(ctx, uploadExchangeName, routingKey, body)
 }
 
 // ConsumeUploadQueue Logic 调用，声明共享上行队列并返回消费通道。
@@ -226,18 +271,7 @@ func ConsumeUploadQueue(queueName, routingKey string) (<-chan amqp.Delivery, err
 // PublishDown 下行发布（Logic → MQ → 目标 Gateway）。
 // routingKey 传目标网关地址（如 "127.0.0.1:8080"），消息持久化防重启丢失。
 func PublishDown(ctx context.Context, routingKey string, body []byte) error {
-	return getPublishCh().PublishWithContext(
-		ctx,
-		downExchangeName, // exchange
-		routingKey,       // routing key：目标网关地址
-		false,            // mandatory
-		false,            // immediate
-		amqp.Publishing{
-			ContentType:  "application/json",
-			DeliveryMode: amqp.Persistent, // 持久化消息，Broker 重启不丢
-			Body:         body,
-		},
-	)
+	return getPublishCh().publish(ctx, downExchangeName, routingKey, body)
 }
 
 // ConsumeDownQueue 声明该网关专属的持久化下行 Queue，绑定到下行 Exchange，返回消息通道。
@@ -277,18 +311,7 @@ func ConsumeDownQueue(queueName, routingKey string) (<-chan amqp.Delivery, error
 
 // PublishVector 向量写入（logic->vector Consumer）异步向向量数据库投递
 func PublishVector(ctx context.Context, vectorRoutingKey string, body []byte) error {
-	return getPublishCh().PublishWithContext(
-		ctx,
-		vectorExchangeName,
-		vectorRoutingKey,
-		false,
-		false,
-		amqp.Publishing{
-			ContentType:  "application/json",
-			DeliveryMode: amqp.Persistent,
-			Body:         body,
-		},
-	)
+	return getPublishCh().publish(ctx, vectorExchangeName, vectorRoutingKey, body)
 }
 
 func ConsumeVectorQueue(queueName string, vectorRoutingKey string) (<-chan amqp.Delivery, error) {
@@ -327,7 +350,7 @@ func ConsumeVectorQueue(queueName string, vectorRoutingKey string) (<-chan amqp.
 func Close() {
 	for _, ch := range publishChs {
 		if ch != nil {
-			_ = ch.Close()
+			_ = ch.channel.Close()
 		}
 	}
 	if channel != nil {

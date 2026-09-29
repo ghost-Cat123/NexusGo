@@ -1,0 +1,28 @@
+{
+  "corpus": [
+    {"msg_id": 910000000001, "content": "网关为每条事件生成唯一 MsgID，数据库唯一索引配合幂等校验避免重复投递。"},
+    {"msg_id": 910000000002, "content": "消息中心今天出现推送延迟，先观察消费者积压。"},
+    {"msg_id": 910000000003, "content": "接收方不在线时内容先落库，用户重连后通过未读同步补发。"},
+    {"msg_id": 910000000004, "content": "离线活动公告消息需要第二天统一推送。"},
+    {"msg_id": 910000000005, "content": "多个消费者并发处理时不能批量确认 delivery tag，应逐条 ACK。"},
+    {"msg_id": 910000000006, "content": "RabbitMQ 里的消息积压需要增加消费者数量。"},
+    {"msg_id": 910000000007, "content": "历史聊天搜索使用全文索引和向量检索并行，再通过 RRF 融合排序。"},
+    {"msg_id": 910000000008, "content": "检索服务日志需要按小时保存。"},
+    {"msg_id": 910000000009, "content": "长对话将最近消息放 Redis，中期摘要存 MySQL，长期记忆写 Milvus。"},
+    {"msg_id": 910000000010, "content": "用户的消息列表需要支持游标分页。"},
+    {"msg_id": 910000000011, "content": "写入型工具必须经过人工审批，防止 Agent 误执行定时发送。"},
+    {"msg_id": 910000000012, "content": "工具调用记录保存到审计日志。"}
+  ],
+  "queries": [
+    {"id": "q01", "category": "exact", "query": "如何防止消息重复投递", "keywords": "重复 投递", "expected_msg_ids": [910000000001]},
+    {"id": "q02", "category": "semantic_trap", "query": "同一条事件多次抵达要怎么避免重复", "keywords": "消息", "expected_msg_ids": [910000000001]},
+    {"id": "q03", "category": "exact", "query": "离线后回来如何收到之前内容", "keywords": "离线 未读", "expected_msg_ids": [910000000003]},
+    {"id": "q04", "category": "semantic_trap", "query": "对方断网再登录还能看到之前聊天吗", "keywords": "消息", "expected_msg_ids": [910000000003]},
+    {"id": "q05", "category": "exact", "query": "多个 worker 怎么确认 MQ 消费完成", "keywords": "消费者 确认", "expected_msg_ids": [910000000005]},
+    {"id": "q06", "category": "semantic_trap", "query": "并发消费时怎样避免误确认别人的包", "keywords": "消息", "expected_msg_ids": [910000000005]},
+    {"id": "q07", "category": "exact", "query": "聊天记录检索怎么结合关键词和语义", "keywords": "聊天 检索", "expected_msg_ids": [910000000007]},
+    {"id": "q08", "category": "semantic_trap", "query": "搜历史对话时两种召回怎样合并排序", "keywords": "消息", "expected_msg_ids": [910000000007]},
+    {"id": "q09", "category": "exact", "query": "Agent 如何防止长对话失忆", "keywords": "长 对话 记忆", "expected_msg_ids": [910000000009]},
+    {"id": "q10", "category": "semantic_trap", "query": "模型执行发送操作前为什么需要人确认", "keywords": "消息", "expected_msg_ids": [910000000011]}
+  ]
+}

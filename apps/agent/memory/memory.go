@@ -148,7 +148,7 @@ func (s *Session) triggerSummaryCompress() {
 	// 5. 原子性替换 Redis：
 	//    - 删去已压缩的旧消息（LTrim 保留 toCompress 之后的部分）
 	//    - 在头部插入一条 SystemMessage 作为摘要占位
-	summaryMsg := schema.SystemMessage(fmt.Sprintf("[历史摘要] %s", summary))
+	summaryMsg := schema.SystemMessage(fmt.Sprintf("[历史摘要] %s", summary.Summary))
 	summaryData, _ := json.Marshal(summaryMsg)
 
 	_, err = summaryScript.Run(ctx, cache.GetCache(), []string{s.Key}, summaryData, toCompress, int64(s.Store.TTL.Seconds())).Result()

@@ -1,10 +1,8 @@
 package user_api
 
 import (
-	"GrowRPC/xclient"
 	"NexusGo/apps/gateway/rpcclient"
 	"NexusGo/apps/pkg/proto/pb_user"
-	"context"
 	"net/http"
 	"strconv"
 
@@ -21,7 +19,7 @@ func GetUserInfoHandler(c *gin.Context) {
 		}
 	}
 
-	ctx := xclient.WithRoutingKey(context.Background(), "") // 走一致性哈希，或者空让底层随机/哈希
+	ctx := rpcclient.WithUserRoutingKey(c.Request.Context(), targetID)
 	reply, err := rpcclient.UserServiceClient.GetUserInfo(ctx, &pb_user.GetUserInfoArgs{UserId: targetID})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "获取用户信息失败", "error": err.Error()})
@@ -53,7 +51,7 @@ func UpdateUserInfoHandler(c *gin.Context) {
 		return
 	}
 
-	_, err := rpcclient.UserServiceClient.UpdateUserInfo(context.Background(), &pb_user.UpdateUserInfoArgs{
+	_, err := rpcclient.UserServiceClient.UpdateUserInfo(rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64)), &pb_user.UpdateUserInfoArgs{
 		UserId:   userID.(int64),
 		Nickname: req.Nickname,
 		Avatar:   req.Avatar,
@@ -75,7 +73,8 @@ func SearchUserHandler(c *gin.Context) {
 		return
 	}
 
-	ctx := context.Background()
+	userID, _ := c.Get("user_id")
+	ctx := rpcclient.WithUserRoutingKey(c.Request.Context(), userID.(int64))
 	reply, err := rpcclient.UserServiceClient.SearchUser(ctx, &pb_user.SearchUserArgs{Keyword: keyword})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "msg": "搜索失败", "error": err.Error()})
